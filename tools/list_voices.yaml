@@ -1,0 +1,48 @@
+identity:
+  name: list_voices
+  author: shisa-ai
+  label:
+    en_US: List TTS Voices
+    ja_JP: TTS音声一覧
+description:
+  human:
+    en_US: Dynamically list Shisa AI voices, native formats, languages, and streaming capabilities.
+    ja_JP: Shisa AIの音声、ネイティブ形式、言語、ストリーミング対応状況を動的に取得します。
+  llm: List Shisa AI TTS voices and their exact capabilities before generating speech.
+parameters:
+  - name: language
+    type: string
+    required: false
+    label:
+      en_US: Language filter
+      ja_JP: 言語フィルター
+    human_description:
+      en_US: Optional language name or locale, such as Japanese, English, or ja-JP.
+      ja_JP: Japanese、English、ja-JPなどの任意の言語名またはロケール。
+    llm_description: Optional case-insensitive language filter.
+    form: llm
+  - name: format
+    type: select
+    required: false
+    label:
+      en_US: Format filter
+      ja_JP: 形式フィルター
+    options:
+      - label: { en_US: MP3, ja_JP: MP3 }
+        value: mp3
+      - label: { en_US: WAV, ja_JP: WAV }
+        value: wav
+      - label: { en_US: OGG, ja_JP: OGG }
+        value: ogg
+      - label: { en_US: FLAC, ja_JP: FLAC }
+        value: flac
+      - label: { en_US: PCM, ja_JP: PCM }
+        value: pcm
+    human_description:
+      en_US: Only return voices supporting this native output format.
+      ja_JP: このネイティブ出力形式をサポートする音声のみ返します。
+    llm_description: Optional native audio format filter.
+    form: form
+extra:
+  python:
+    source: tools/list_voices.py

@@ -1,0 +1,60 @@
+identity:
+  name: generate_speech
+  author: shisa-ai
+  label:
+    en_US: Generate Speech
+    ja_JP: 音声を生成
+description:
+  human:
+    en_US: Generate speech with a Shisa AI voice in a supported native audio format.
+    ja_JP: Shisa AI音声を使用し、対応するネイティブ音声形式で音声を生成します。
+  llm: Generate a complete audio file using a Shisa AI TTS voice and native output format.
+parameters:
+  - name: text
+    type: string
+    required: true
+    label:
+      en_US: Text
+      ja_JP: テキスト
+    human_description:
+      en_US: Text to synthesize.
+      ja_JP: 音声合成するテキスト。
+    llm_description: Text that must be converted into speech.
+    form: llm
+  - name: voice_id
+    type: string
+    required: true
+    label:
+      en_US: Voice ID
+      ja_JP: 音声ID
+    human_description:
+      en_US: A Shisa AI voice UUID. Use List TTS Voices to discover current IDs and capabilities.
+      ja_JP: Shisa AI音声UUID。現在のIDと機能はTTS音声一覧ツールで確認してください。
+    llm_description: Exact Shisa AI voice UUID obtained from List TTS Voices.
+    form: llm
+  - name: format
+    type: select
+    required: true
+    default: mp3
+    label:
+      en_US: Audio format
+      ja_JP: 音声形式
+    options:
+      - label: { en_US: MP3, ja_JP: MP3 }
+        value: mp3
+      - label: { en_US: WAV, ja_JP: WAV }
+        value: wav
+      - label: { en_US: OGG, ja_JP: OGG }
+        value: ogg
+      - label: { en_US: FLAC, ja_JP: FLAC }
+        value: flac
+      - label: { en_US: PCM, ja_JP: PCM }
+        value: pcm
+    human_description:
+      en_US: Must be one of the formats advertised for the selected voice.
+      ja_JP: 選択した音声が対応する形式を指定してください。
+    llm_description: Native output format supported by the selected voice.
+    form: form
+extra:
+  python:
+    source: tools/generate_speech.py

@@ -25,12 +25,12 @@ parameters:
     type: string
     required: true
     label:
-      en_US: Voice ID
-      ja_JP: 音声ID
+      en_US: Voice
+      ja_JP: 音声
     human_description:
-      en_US: A Shisa AI voice UUID. Use List TTS Voices to discover current IDs and capabilities.
-      ja_JP: Shisa AI音声UUID。現在のIDと機能はTTS音声一覧ツールで確認してください。
-    llm_description: Exact Shisa AI voice UUID obtained from List TTS Voices.
+      en_US: Enter a human-readable description such as "JA Female Kids Show Host", or an exact voice UUID.
+      ja_JP: 「JA Female Kids Show Host」のような説明、または正確な音声UUIDを入力してください。
+    llm_description: Human-readable Shisa AI voice name or description; an exact UUID is also accepted.
     form: llm
   - name: format
     type: select

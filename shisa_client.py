@@ -55,6 +55,48 @@ def get_voice_catalog(credentials: dict[str, Any]) -> list[dict[str, Any]]:
     return result
 
 
+def voice_label(voice: dict[str, Any]) -> str:
+    return str(
+        voice.get("displayName")
+        or voice.get("name")
+        or voice.get("description")
+        or voice.get("id")
+        or "Unknown voice"
+    )
+
+
+def resolve_voice(voices: list[dict[str, Any]], query: str) -> dict[str, Any]:
+    """Resolve a voice UUID or human-readable API name/description."""
+    value = query.strip().casefold()
+    if not value:
+        raise ValueError("Voice name, description, or ID is required")
+
+    for voice in voices:
+        if str(voice.get("id", "")).casefold() == value:
+            return voice
+
+    label_fields = ("displayName", "name", "description")
+    exact = [
+        voice
+        for voice in voices
+        if any(str(voice.get(field, "")).strip().casefold() == value for field in label_fields)
+    ]
+    if len(exact) == 1:
+        return exact[0]
+
+    partial = [
+        voice
+        for voice in voices
+        if any(value in str(voice.get(field, "")).casefold() for field in label_fields)
+    ]
+    if len(partial) == 1:
+        return partial[0]
+    if len(partial) > 1:
+        matches = ", ".join(voice_label(voice) for voice in partial[:10])
+        raise ValueError(f"Voice description is ambiguous; matching voices: {matches}")
+    raise ValueError(f"Shisa AI voice not found: {query}")
+
+
 def generate_speech(
     credentials: dict[str, Any], text: str, voice_id: str, audio_format: str
 ) -> bytes:

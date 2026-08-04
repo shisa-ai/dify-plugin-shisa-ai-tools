@@ -10,6 +10,17 @@ description:
     ja_JP: Shisa AIの音声、ネイティブ形式、言語、ストリーミング対応状況を動的に取得します。
   llm: List Shisa AI TTS voices and their exact capabilities before generating speech.
 parameters:
+  - name: search
+    type: string
+    required: false
+    label:
+      en_US: Voice search
+      ja_JP: 音声検索
+    human_description:
+      en_US: Find voices by a partial name or description, such as "Kids Show Host".
+      ja_JP: 「Kids Show Host」のような名前または説明の一部で音声を検索します。
+    llm_description: Optional case-insensitive partial voice name or description.
+    form: llm
   - name: language
     type: string
     required: false

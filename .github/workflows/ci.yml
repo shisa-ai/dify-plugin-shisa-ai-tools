@@ -53,6 +53,7 @@ jobs:
       - name: Build and validate Dify package
         shell: bash
         run: |
+          mkdir -p dist
           curl --fail --silent --show-error --location \
             "https://github.com/langgenius/dify-plugin-daemon/releases/download/${DIFY_CLI_VERSION}/dify-plugin-linux-amd64" \
             --output /tmp/dify-plugin

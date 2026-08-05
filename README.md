@@ -66,8 +66,8 @@ Official references:
 ```bash
 python3.12 -m venv .venv
 . .venv/bin/activate
-pip install -r requirements.txt
-python -m main
+uv sync --frozen --no-install-project
+uv run --frozen python main.py
 ```
 
 Never publish `.env`, `.dev.vars`, Shisa API keys, Dify application tokens, or remote-debug credentials.

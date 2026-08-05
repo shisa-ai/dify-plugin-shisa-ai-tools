@@ -9,6 +9,10 @@ All notable user-visible changes are documented here.
 - Add synchronous Japanese-English **Translate Text** using `POST /translate/` with `multipart/form-data`.
 - Return only completed translated text without exposing account-balance fields.
 
+### Security
+
+- Adopt the Shisa AI supply-chain baseline with uv locking, a seven-day resolution cutoff, fully pinned hashed requirements, immutable GitHub Action SHAs, dependency review, workflow policy validation, a repository audit, and deterministic CycloneDX SBOM generation.
+
 ## [0.0.2] - 2026-08-05
 
 ### Added

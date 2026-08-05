@@ -1,0 +1,104 @@
+identity:
+  name: transcribe_audio
+  author: shisa-ai
+  label:
+    en_US: Transcribe Audio
+    ja_JP: 音声を文字起こし
+description:
+  human:
+    en_US: Transcribe an audio file with per-node Shisa ASR language, hotwords, and tuning controls.
+    ja_JP: ノードごとに言語、ホットワード、調整値を指定してShisa ASRで音声を文字起こしします。
+  llm: Transcribe an audio file with Shisa ASR. Optional parameters are sent only when configured.
+parameters:
+  - name: audio
+    type: file
+    required: true
+    label:
+      en_US: Audio file
+      ja_JP: 音声ファイル
+    human_description:
+      en_US: WAV, OGG, MP3, or FLAC audio to transcribe.
+      ja_JP: 文字起こしするWAV、OGG、MP3、またはFLAC音声。
+    llm_description: Audio file that must be transcribed.
+    form: llm
+  - name: language
+    type: string
+    required: false
+    label:
+      en_US: Language
+      ja_JP: 言語
+    human_description:
+      en_US: Optional language code such as ja or en. Leave blank for automatic detection.
+      ja_JP: ja、enなどの任意の言語コード。自動検出する場合は空欄。
+    llm_description: Optional ASR language code. Omit for automatic language detection.
+    form: llm
+  - name: hotwords
+    type: string
+    required: false
+    label:
+      en_US: Hotwords
+      ja_JP: ホットワード
+    human_description:
+      en_US: Optional JSON string array or comma/newline-separated words and phrases for this node.
+      ja_JP: このノードで使う任意のJSON文字列配列、またはカンマ/改行区切りの単語・フレーズ。
+    llm_description: Optional domain words or phrases. Use a JSON array or comma/newline-separated text.
+    form: llm
+  - name: temperature
+    type: number
+    required: false
+    label:
+      en_US: Temperature
+      ja_JP: Temperature
+    human_description:
+      en_US: Optional sampling temperature. Blank uses the Shisa API default of 0.0.
+      ja_JP: 任意のサンプリング温度。空欄ではShisa APIデフォルトの0.0を使用。
+    llm_description: Optional ASR sampling temperature.
+    form: llm
+  - name: top_p
+    type: number
+    required: false
+    label:
+      en_US: Top P
+      ja_JP: Top P
+    human_description:
+      en_US: Optional nucleus sampling value. Blank uses the Shisa API default of 0.85.
+      ja_JP: 任意のNucleus Sampling値。空欄ではShisa APIデフォルトの0.85を使用。
+    llm_description: Optional ASR top_p value.
+    form: llm
+  - name: frequency_penalty
+    type: number
+    required: false
+    label:
+      en_US: Frequency penalty
+      ja_JP: Frequency penalty
+    human_description:
+      en_US: Optional frequency penalty. Blank uses the Shisa API default of 0.5.
+      ja_JP: 任意のfrequency penalty。空欄ではShisa APIデフォルトの0.5を使用。
+    llm_description: Optional ASR frequency penalty.
+    form: llm
+  - name: repetition_penalty
+    type: number
+    required: false
+    label:
+      en_US: Repetition penalty
+      ja_JP: Repetition penalty
+    human_description:
+      en_US: Optional repetition penalty. Blank uses the Shisa API default of 1.05.
+      ja_JP: 任意のrepetition penalty。空欄ではShisa APIデフォルトの1.05を使用。
+    llm_description: Optional ASR repetition penalty.
+    form: llm
+  - name: vad
+    type: number
+    required: false
+    precision: 0
+    label:
+      en_US: VAD mode
+      ja_JP: VADモード
+    human_description:
+      en_US: Optional integer VAD mode. Blank uses the Shisa API default of 1.
+      ja_JP: 任意の整数VADモード。空欄ではShisa APIデフォルトの1を使用。
+    llm_description: Optional integer voice-activity-detection mode.
+    form: llm
+extra:
+  python:
+    source: tools/transcribe_audio.py

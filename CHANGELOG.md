@@ -2,6 +2,17 @@
 
 All notable user-visible changes are documented here.
 
+## [1.0.2] - Unreleased
+
+### Added
+
+- Add **Transcribe Audio** with per-node language, hotwords, temperature, `top_p`, frequency penalty, repetition penalty, and VAD controls.
+- Return transcript text and the complete structured ASR response, including language and confidence when supplied by the API.
+
+### Changed
+
+- Omit blank optional transcription parameters so the documented Shisa API defaults remain authoritative.
+
 ## [1.0.1] - 2026-08-05
 
 ### Changed

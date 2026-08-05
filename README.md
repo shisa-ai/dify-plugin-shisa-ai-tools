@@ -16,6 +16,10 @@ Dynamically retrieves and filters current voice names, descriptions, UUIDs, lang
 
 Accepts a human-readable description such as `JA Female Kids Show Host`, or a voice UUID, and generates a complete MP3, WAV, OGG, FLAC, or PCM file when the selected voice supports that format.
 
+### Transcribe Audio
+
+Transcribes WAV, OGG, MP3, or FLAC audio with `POST /asr/srt/audio_llm`. A workflow author can configure language, hotwords, temperature, `top_p`, frequency penalty, repetition penalty, and VAD independently in each Tool node. Parameters left blank are omitted so the Shisa API defaults apply. The tool returns transcript text and the complete structured ASR response, including language and confidence when supplied by the API.
+
 ### Translate Text
 
 Translates completed text between Japanese and English with `POST /translate/`. Translation requests use `multipart/form-data`, and the tool returns only the translated text rather than account-balance fields from the API response.
@@ -32,7 +36,7 @@ Current prices, quotas, available voices, formats, and service behavior can chan
 
 ## Installation
 
-1. Download `shisa-ai-tools-1.0.1.difypkg` from the [v1.0.0 GitHub Release](https://github.com/shisa-ai/dify-plugin-shisa-ai-tools/releases/tag/v1.0.1).
+1. Download `shisa-ai-tools-1.0.1.difypkg` from the [v1.0.1 GitHub Release](https://github.com/shisa-ai/dify-plugin-shisa-ai-tools/releases/tag/v1.0.1).
 2. Optionally verify its GitHub-provided SHA-256 digest and provenance attestation.
 3. In Dify, open **Plugins**, choose installation from a local package, and upload the file.
 4. Configure the Tools provider with your Shisa AI API key.
@@ -50,6 +54,8 @@ https://api.shisa.ai
 
 For speech generation, use **List TTS Voices** to inspect the live catalogue, then pass a readable voice description or exact UUID to **Generate Speech**.
 
+For transcription, provide an audio file and optionally set node-specific language, hotwords, and tuning parameters. Leave optional values blank to use the documented Shisa ASR defaults.
+
 For translation, choose different source and target languages:
 
 ```text
@@ -60,6 +66,7 @@ Target: en
 
 Official references:
 
+- [ASR API reference](https://docs.shisa.ai/asr/endpoints)
 - [TTS documentation](https://docs.shisa.ai/tts/)
 - [Translation API reference](https://docs.shisa.ai/translation/endpoints)
 - [Authentication](https://docs.shisa.ai/guides/authentication)

@@ -7,7 +7,8 @@ This release gate covers every Shisa AI Tools node and the regressions that must
 The protected GitHub `release` environment must contain:
 
 - Secret `SHISA_API_KEY`: a limited test-account API key.
-- Optional variable `SHISA_TEST_VOICE_ID`: a stable Japanese test voice UUID.
+
+The voice is selected dynamically from the current catalogue. The test prefers a Japanese voice and WAV, then falls back only to another currently advertised ASR-compatible native format.
 
 Every protected `v*` tag runs:
 

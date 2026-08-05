@@ -60,7 +60,6 @@ jobs:
       - name: Run credentialed live API smoke test
         env:
           SHISA_API_KEY: ${{ secrets.SHISA_API_KEY }}
-          SHISA_TEST_VOICE_ID: ${{ vars.SHISA_TEST_VOICE_ID }}
         shell: bash
         run: |
           if [ -z "${SHISA_API_KEY}" ]; then

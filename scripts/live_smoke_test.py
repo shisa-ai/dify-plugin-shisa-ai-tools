@@ -32,12 +32,8 @@ def supported_formats(voice: dict[str, Any]) -> list[str]:
     return [str(value).lower() for value in voice.get("formats", []) if str(value).lower() in accepted]
 
 
-def select_voice(voices: list[dict[str, Any]], requested_id: str | None) -> tuple[dict[str, Any], str]:
+def select_voice(voices: list[dict[str, Any]]) -> tuple[dict[str, Any], str]:
     candidates = voices
-    if requested_id:
-        candidates = [voice for voice in voices if str(voice.get("id")) == requested_id]
-        if not candidates:
-            fail("SHISA_TEST_VOICE_ID was not found in the live voice catalogue")
 
     japanese = [
         voice for voice in candidates
@@ -62,7 +58,7 @@ def main() -> int:
     }
 
     voices = get_voice_catalog(credentials)
-    voice, audio_format = select_voice(voices, os.environ.get("SHISA_TEST_VOICE_ID"))
+    voice, audio_format = select_voice(voices)
 
     spoken_text = os.environ.get(
         "SHISA_TEST_SPEECH_TEXT",

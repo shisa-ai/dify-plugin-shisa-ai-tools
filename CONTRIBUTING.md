@@ -27,7 +27,7 @@ Package and install the plugin in a test Dify workspace when changing API behavi
 
 ## Releases
 
-Release publication is automated and tag-only. After the version PR has passed CI and been merged to `main`, create the matching protected tag (for example, `v1.0.0`) on that merge commit. Do not publish packages from pull requests or commit generated release files. The release workflow builds and validates the package, scans dependencies, attaches an SBOM and checksums, and records provenance.
+Release publication is automated and tag-only. After the version PR has passed CI and been merged to `main`, create the matching protected tag (for example, `v1.0.0`) on that merge commit. Do not publish packages from pull requests or commit generated release files. The release workflow builds and validates the package, scans dependencies, embeds the runtime SBOM in the package and records provenance.
 
 ## Pull requests
 

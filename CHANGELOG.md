@@ -2,6 +2,15 @@
 
 All notable user-visible changes are documented here.
 
+## [1.0.1] - 2026-08-05
+
+### Changed
+
+- Publish only the installable `.difypkg` as a custom GitHub Release asset to make installation unambiguous.
+- Embed the CycloneDX runtime SBOM inside the package and rely on GitHub’s asset digest and provenance attestation for external verification.
+- Add the official repository URL to plugin metadata for GitHub-source installation and updates.
+- Restore the Dify manifest metadata format version to `0.0.1`; the plugin release version remains `1.0.1`.
+
 ## [1.0.0] - 2026-08-05
 
 ### Added

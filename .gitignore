@@ -9,3 +9,5 @@ __pycache__/
 *.difypkg
 .DS_Store
 dist/
+
+/SBOM.cdx.json

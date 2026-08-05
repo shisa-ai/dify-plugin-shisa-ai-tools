@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import tomllib
 import zipfile
@@ -22,7 +23,14 @@ FORBIDDEN_PARTS = {
     "tests",
 }
 FORBIDDEN_NAMES = {".env", ".dev.vars", "uv.lock"}
-REQUIRED_NAMES = {"LICENSE", "README.md", "manifest.yaml", "main.py", "requirements.txt"}
+REQUIRED_NAMES = {
+    "LICENSE",
+    "README.md",
+    "SBOM.cdx.json",
+    "manifest.yaml",
+    "main.py",
+    "requirements.txt",
+}
 
 
 def main() -> None:
@@ -59,6 +67,13 @@ def main() -> None:
             raise SystemExit("packaged manifest and project versions differ")
         if packaged_manifest != source_manifest:
             raise SystemExit("packaged manifest differs from source manifest")
+
+        sbom = json.loads(archive.read("SBOM.cdx.json"))
+        if sbom.get("bomFormat") != "CycloneDX":
+            raise SystemExit("embedded SBOM is not CycloneDX")
+        sbom_component = sbom.get("metadata", {}).get("component", {})
+        if sbom_component.get("name") != project["name"] or sbom_component.get("version") != project["version"]:
+            raise SystemExit("embedded SBOM does not describe this plugin version")
 
         requirements = archive.read("requirements.txt").decode("utf-8")
         requirement_starts = [

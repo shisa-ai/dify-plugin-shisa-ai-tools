@@ -13,34 +13,61 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  UV_EXCLUDE_NEWER: "2026-07-29T00:00:00Z"
+
 jobs:
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.12"
-          cache: pip
-      - name: Install dependencies
-        run: pip install -r requirements.txt PyYAML
-      - name: Compile Python
-        run: python -m compileall -q .
-      - name: Run unit tests
-        run: python -m unittest discover -s tests -v
-      - name: Validate metadata
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: "0.8.22"
+          enable-cache: false
+      - name: Verify lockfile
+        run: uv lock --check
+      - name: Install frozen environment
+        run: uv sync --frozen --no-install-project
+      - name: Verify hashed Dify requirements export
         run: |
-          python - <<'PY'
+          uv export --frozen --no-dev --no-emit-project --no-header --no-annotate --output-file /tmp/requirements.txt
+          diff -u requirements.txt /tmp/requirements.txt
+      - name: Compile Python
+        run: uv run --frozen python -m compileall -q main.py shisa_client.py provider tools scripts tests
+      - name: Run unit tests
+        run: uv run --frozen python -m unittest discover -s tests -v
+      - name: Validate workflows
+        run: uv run --frozen python scripts/validate_workflows.py
+      - name: Generate and validate SBOM
+        run: |
+          uv run --frozen python scripts/generate_sbom.py
+          python -m json.tool dist/sbom.cdx.json >/dev/null
+      - name: Validate plugin metadata
+        run: |
+          uv run --frozen python - <<'PY'
           import pathlib
           import tomllib
           import yaml
 
           manifest = yaml.safe_load(pathlib.Path("manifest.yaml").read_text(encoding="utf-8"))
           project = tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))
-          provider = yaml.safe_load(pathlib.Path("provider/shisa_ai_tools.yaml").read_text(encoding="utf-8"))
           assert manifest["version"] == project["project"]["version"]
           assert manifest["author"] == "shisa-ai"
+          provider = yaml.safe_load(pathlib.Path("provider/shisa_ai_tools.yaml").read_text(encoding="utf-8"))
           assert "tools/translate_text.yaml" in provider["tools"]
           print(f"validated plugin {manifest['name']} {manifest['version']}")
           PY
+
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/dependency-review-action@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

@@ -16,9 +16,9 @@ Thank you for helping improve the Shisa AI Tools integration for Dify.
 ```bash
 python3.12 -m venv .venv
 . .venv/bin/activate
-pip install -r requirements.txt
-python -m compileall -q .
-python -m unittest discover -s tests -v
+UV_EXCLUDE_NEWER=2026-07-29T00:00:00Z uv sync --frozen --no-install-project
+uv run --frozen python -m compileall -q .
+uv run --frozen python -m unittest discover -s tests -v
 ```
 
 Package and install the plugin in a test Dify workspace when changing API behavior. Test affected tools with non-sensitive data and do not expose production credentials in output, logs, or fixtures.

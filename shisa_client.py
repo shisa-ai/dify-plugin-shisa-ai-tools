@@ -97,6 +97,35 @@ def resolve_voice(voices: list[dict[str, Any]], query: str) -> dict[str, Any]:
     raise ValueError(f"Shisa AI voice not found: {query}")
 
 
+def translate_text(
+    credentials: dict[str, Any], text: str, source_lang: str, target_lang: str
+) -> str:
+    """Return a completed Shisa Translation response as plain text."""
+    try:
+        response = httpx.post(
+            f"{api_base(credentials)}/translate/",
+            headers=headers(credentials),
+            files={
+                "text": (None, text),
+                "source_lang": (None, source_lang),
+                "target_lang": (None, target_lang),
+                "stream": (None, "false"),
+            },
+            timeout=300.0,
+        )
+    except (httpx.ConnectError, httpx.TimeoutException) as error:
+        raise ValueError(f"Could not connect to Shisa AI: {error}") from error
+    raise_for_status(response)
+    try:
+        payload = response.json()
+        translation = payload["choices"][0]["message"]["content"]
+    except (ValueError, KeyError, IndexError, TypeError) as error:
+        raise ValueError("Shisa AI returned an invalid translation response") from error
+    if not isinstance(translation, str) or not translation.strip():
+        raise ValueError("Shisa AI returned an empty translation")
+    return translation
+
+
 def generate_speech(
     credentials: dict[str, Any], text: str, voice_id: str, audio_format: str
 ) -> bytes:

@@ -1,0 +1,66 @@
+identity:
+  name: translate_text
+  author: shisa-ai
+  label:
+    en_US: Translate Text
+    ja_JP: テキスト翻訳
+description:
+  human:
+    en_US: Translate text between Japanese and English with the Shisa Translation API.
+    ja_JP: Shisa Translation APIで日本語と英語の間を翻訳します。
+  llm: Translate text between Japanese and English using Shisa Translation. Returns the completed translated text.
+parameters:
+  - name: text
+    type: string
+    required: true
+    label:
+      en_US: Text
+      ja_JP: 翻訳するテキスト
+    human_description:
+      en_US: Text to translate.
+      ja_JP: 翻訳対象のテキスト。
+    llm_description: The complete source text to translate. Preserve all relevant content.
+    form: llm
+  - name: source_lang
+    type: select
+    required: true
+    label:
+      en_US: Source language
+      ja_JP: 翻訳元言語
+    options:
+      - label:
+          en_US: Japanese
+          ja_JP: 日本語
+        value: ja
+      - label:
+          en_US: English
+          ja_JP: 英語
+        value: en
+    human_description:
+      en_US: Language of the source text.
+      ja_JP: 翻訳元テキストの言語。
+    llm_description: Source language code. Use ja for Japanese or en for English.
+    form: llm
+  - name: target_lang
+    type: select
+    required: true
+    label:
+      en_US: Target language
+      ja_JP: 翻訳先言語
+    options:
+      - label:
+          en_US: Japanese
+          ja_JP: 日本語
+        value: ja
+      - label:
+          en_US: English
+          ja_JP: 英語
+        value: en
+    human_description:
+      en_US: Language for the translated output.
+      ja_JP: 翻訳結果の言語。
+    llm_description: Target language code. Use ja for Japanese or en for English.
+    form: llm
+extra:
+  python:
+    source: tools/translate_text.py

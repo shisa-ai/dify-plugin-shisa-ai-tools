@@ -5,8 +5,8 @@ identity:
     en_US: Shisa AI Tools
     ja_JP: Shisa AI ツール
   description:
-    en_US: Generate speech in Shisa AI's native formats and discover voices dynamically.
-    ja_JP: Shisa AIのネイティブ形式で音声を生成し、音声一覧を動的に取得します。
+    en_US: Use Shisa AI translation and generate speech in native formats with dynamic voice discovery.
+    ja_JP: Shisa AI翻訳、ネイティブ音声生成、動的な音声一覧取得を利用します。
   icon: shisa-icon.png
   tags:
     - utilities
@@ -37,6 +37,7 @@ credentials_for_provider:
 tools:
   - tools/list_voices.yaml
   - tools/generate_speech.yaml
+  - tools/translate_text.yaml
 extra:
   python:
     source: provider/shisa_ai_tools.py

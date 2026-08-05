@@ -1,4 +1,4 @@
-version: 0.0.2
+version: 0.0.3
 type: plugin
 author: shisa-ai
 name: shisa_ai_tools
@@ -6,8 +6,8 @@ label:
   en_US: Shisa AI Tools
   ja_JP: Shisa AI ツール
 description:
-  en_US: Advanced Shisa AI speech tools with dynamic voices and native audio formats.
-  ja_JP: 動的な音声一覧とネイティブ音声形式に対応したShisa AI音声ツール。
+  en_US: Advanced Shisa AI speech and translation tools with dynamic voices and native audio formats.
+  ja_JP: 動的な音声一覧、ネイティブ音声形式、日英翻訳に対応したShisa AIツール。
 created_at: "2026-08-04T00:00:00Z"
 icon: shisa-icon.png
 resource:
@@ -19,7 +19,7 @@ plugins:
   tools:
     - provider/shisa_ai_tools.yaml
 meta:
-  version: 0.0.2
+  version: 0.0.3
   arch:
     - amd64
     - arm64

@@ -1,7 +1,16 @@
 .git/
+.github/
+tests/
+CONTRIBUTING.md
+CHANGELOG.md
+SECURITY.md
+.gitattributes
 .venv/
 __pycache__/
 *.py[cod]
 .env
+.env.*
+!.env.example
 .dev.vars
+.dev.vars.*
 *.difypkg

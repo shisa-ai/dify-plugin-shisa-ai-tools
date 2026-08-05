@@ -3,6 +3,12 @@ from typing import Any
 import httpx
 
 
+def normalize_transcript(value: str) -> str:
+    """Suppress only the exact case-insensitive [Music] marker."""
+    transcript = value.strip()
+    return "" if transcript.casefold() == "[music]" else transcript
+
+
 def parse_hotwords(value: Any) -> list[str]:
     """Accept a JSON array, Python string list, or comma/newline-separated text."""
     import json

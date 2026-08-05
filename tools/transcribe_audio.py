@@ -4,7 +4,7 @@ from typing import Any
 from dify_plugin import Tool
 from dify_plugin.entities.tool import ToolInvokeMessage
 
-from shisa_client import parse_hotwords, transcribe_audio
+from shisa_client import normalize_transcript, parse_hotwords, transcribe_audio
 
 
 class TranscribeAudioTool(Tool):
@@ -45,9 +45,8 @@ class TranscribeAudioTool(Tool):
             repetition_penalty=optional_float("repetition_penalty"),
             vad=vad,
         )
-        transcript = str(result["text"]).strip()
-        if transcript.casefold() == "[music]":
-            transcript = ""
+        transcript = normalize_transcript(str(result["text"]))
+        if transcript != result["text"]:
             result = {**result, "text": transcript}
 
         yield self.create_text_message(transcript)

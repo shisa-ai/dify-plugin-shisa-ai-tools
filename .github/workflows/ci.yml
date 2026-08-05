@@ -15,6 +15,8 @@ permissions:
 
 env:
   UV_EXCLUDE_NEWER: "2026-07-29T00:00:00Z"
+  DIFY_CLI_VERSION: "0.6.6"
+  DIFY_CLI_SHA256: "1193fff00a1453b7b3b92ae76ff727760bd1aea9e28834e7a43bac602a0ff011"
 
 jobs:
   validate:
@@ -37,6 +39,7 @@ jobs:
         run: |
           uv export --frozen --no-dev --no-emit-project --no-header --no-annotate --output-file /tmp/requirements.txt
           diff -u requirements.txt /tmp/requirements.txt
+          uv run --frozen pip-audit --require-hashes -r requirements.txt
       - name: Compile Python
         run: uv run --frozen python -m compileall -q main.py shisa_client.py provider tools scripts tests
       - name: Run unit tests
@@ -47,6 +50,17 @@ jobs:
         run: |
           uv run --frozen python scripts/generate_sbom.py
           python -m json.tool dist/sbom.cdx.json >/dev/null
+      - name: Build and validate Dify package
+        shell: bash
+        run: |
+          curl --fail --silent --show-error --location \
+            "https://github.com/langgenius/dify-plugin-daemon/releases/download/${DIFY_CLI_VERSION}/dify-plugin-linux-amd64" \
+            --output /tmp/dify-plugin
+          echo "${DIFY_CLI_SHA256}  /tmp/dify-plugin" | sha256sum --check --strict
+          chmod 0755 /tmp/dify-plugin
+          VERSION="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          /tmp/dify-plugin plugin package . --output_path "dist/shisa-ai-tools-${VERSION}.difypkg"
+          uv run --frozen python scripts/validate_package.py "dist/shisa-ai-tools-${VERSION}.difypkg"
       - name: Validate plugin metadata
         run: |
           uv run --frozen python - <<'PY'

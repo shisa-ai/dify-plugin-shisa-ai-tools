@@ -2,12 +2,17 @@
 
 All notable user-visible changes are documented here.
 
-## [0.0.3] - Unreleased
+## [1.0.0] - 2026-08-05
 
 ### Added
 
 - Add synchronous Japanese-English **Translate Text** using `POST /translate/` with `multipart/form-data`.
 - Return only completed translated text without exposing account-balance fields.
+- Add tag-only CI packaging, package-content validation, CycloneDX release SBOMs, SHA-256 checksums, and GitHub artifact provenance attestations.
+
+### Changed
+
+- Promote the Tools plugin package version to `1.0.0`.
 
 ### Security
 

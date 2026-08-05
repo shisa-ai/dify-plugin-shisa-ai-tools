@@ -1,4 +1,4 @@
-version: 0.0.3
+version: 1.0.0
 type: plugin
 author: shisa-ai
 name: shisa_ai_tools
@@ -19,7 +19,7 @@ plugins:
   tools:
     - provider/shisa_ai_tools.yaml
 meta:
-  version: 0.0.3
+  version: 1.0.0
   arch:
     - amd64
     - arm64

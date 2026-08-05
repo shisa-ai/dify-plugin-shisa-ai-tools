@@ -1,0 +1,95 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  UV_EXCLUDE_NEWER: "2026-07-29T00:00:00Z"
+  DIFY_CLI_VERSION: "0.6.6"
+  DIFY_CLI_SHA256: "1193fff00a1453b7b3b92ae76ff727760bd1aea9e28834e7a43bac602a0ff011"
+  PACKAGE_BASENAME: "shisa-ai-tools"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: "0.8.22"
+          enable-cache: false
+      - name: Validate protected release tag
+        id: metadata
+        shell: bash
+        run: |
+          VERSION="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          test "${GITHUB_REF_NAME}" = "v${VERSION}"
+          git fetch origin main --no-tags
+          git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "package=dist/${PACKAGE_BASENAME}-${VERSION}.difypkg" >> "${GITHUB_OUTPUT}"
+      - name: Verify and test frozen source
+        run: |
+          uv lock --check
+          uv sync --frozen --no-install-project
+          uv export --frozen --no-dev --no-emit-project --no-header --no-annotate --output-file /tmp/requirements.txt
+          diff -u requirements.txt /tmp/requirements.txt
+          uv run --frozen pip-audit --require-hashes -r requirements.txt
+          uv run --frozen python -m unittest discover -s tests -v
+          uv run --frozen python scripts/validate_workflows.py
+      - name: Install verified Dify packaging CLI
+        shell: bash
+        run: |
+          curl --fail --silent --show-error --location \
+            "https://github.com/langgenius/dify-plugin-daemon/releases/download/${DIFY_CLI_VERSION}/dify-plugin-linux-amd64" \
+            --output /tmp/dify-plugin
+          echo "${DIFY_CLI_SHA256}  /tmp/dify-plugin" | sha256sum --check --strict
+          chmod 0755 /tmp/dify-plugin
+          /tmp/dify-plugin version
+      - name: Build and validate release files
+        shell: bash
+        run: |
+          mkdir -p dist
+          uv run --frozen python scripts/generate_sbom.py
+          /tmp/dify-plugin plugin package . --output_path "${{ steps.metadata.outputs.package }}"
+          uv run --frozen python scripts/validate_package.py "${{ steps.metadata.outputs.package }}"
+          python -m json.tool dist/sbom.cdx.json >/dev/null
+          (cd dist && sha256sum "${PACKAGE_BASENAME}-${{ steps.metadata.outputs.version }}.difypkg" sbom.cdx.json > SHA256SUMS)
+      - name: Attest package and SBOM provenance
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-path: |
+            ${{ steps.metadata.outputs.package }}
+            dist/sbom.cdx.json
+            dist/SHA256SUMS
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PACKAGE: ${{ steps.metadata.outputs.package }}
+        shell: bash
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            "${PACKAGE}" dist/sbom.cdx.json dist/SHA256SUMS \
+            --verify-tag \
+            --title "Shisa AI Tools ${GITHUB_REF_NAME}" \
+            --generate-notes

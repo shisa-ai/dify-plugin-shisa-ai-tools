@@ -58,7 +58,8 @@ The transitive tree, exact versions, artifact URLs, and hashes are recorded in `
 
 1. Tools `1.0.0` and its Translation API integration require installation and live validation in a non-production Dify workspace before production rollout.
 2. The repository currently has one maintainer. The `release` environment therefore cannot require independent approval; protected tags, exact tag/version validation, main-ancestry validation, immutable pins, CI checks, checksums, and attestations are the compensating controls. Single-maintainer administrative bypasses must be recorded on the relevant PR or release.
-3. Routine Dependabot updates require the seven-day cooldown, lock refresh, tests, and human review. Emergency security updates may use the documented exception.
+3. `pip-audit` has a development-only transitive dependency, `boolean-py`, whose OpenSSF Scorecard is currently 2.8. It is accepted because vulnerability scanning is required; the dependency is version-locked, hash-verified, age-gated, excluded from runtime requirements and the release SBOM, and does not execute in the installed plugin.
+4. Routine Dependabot updates require the seven-day cooldown, lock refresh, tests, and human review. Emergency security updates may use the documented exception.
 
 ## Verification commands
 

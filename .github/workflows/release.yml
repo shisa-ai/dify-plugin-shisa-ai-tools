@@ -70,18 +70,14 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
-          uv run --frozen python scripts/generate_sbom.py
+          uv run --frozen python scripts/generate_sbom.py --output SBOM.cdx.json
           /tmp/dify-plugin plugin package . --output_path "${{ steps.metadata.outputs.package }}"
           uv run --frozen python scripts/validate_package.py "${{ steps.metadata.outputs.package }}"
-          python -m json.tool dist/sbom.cdx.json >/dev/null
-          (cd dist && sha256sum "${PACKAGE_BASENAME}-${{ steps.metadata.outputs.version }}.difypkg" sbom.cdx.json > SHA256SUMS)
-      - name: Attest package and SBOM provenance
+          python -m json.tool SBOM.cdx.json >/dev/null
+      - name: Attest package provenance
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
-          subject-path: |
-            ${{ steps.metadata.outputs.package }}
-            dist/sbom.cdx.json
-            dist/SHA256SUMS
+          subject-path: ${{ steps.metadata.outputs.package }}
       - name: Publish release assets
         env:
           GH_TOKEN: ${{ github.token }}
@@ -89,7 +85,7 @@ jobs:
         shell: bash
         run: |
           gh release create "${GITHUB_REF_NAME}" \
-            "${PACKAGE}" dist/sbom.cdx.json dist/SHA256SUMS \
+            "${PACKAGE}" \
             --verify-tag \
             --title "Shisa AI Tools ${GITHUB_REF_NAME}" \
             --generate-notes

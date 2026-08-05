@@ -48,11 +48,12 @@ jobs:
         run: uv run --frozen python scripts/validate_workflows.py
       - name: Generate and validate SBOM
         run: |
-          uv run --frozen python scripts/generate_sbom.py
-          python -m json.tool dist/sbom.cdx.json >/dev/null
+          uv run --frozen python scripts/generate_sbom.py --output SBOM.cdx.json
+          python -m json.tool SBOM.cdx.json >/dev/null
       - name: Build and validate Dify package
         shell: bash
         run: |
+          mkdir -p dist
           curl --fail --silent --show-error --location \
             "https://github.com/langgenius/dify-plugin-daemon/releases/download/${DIFY_CLI_VERSION}/dify-plugin-linux-amd64" \
             --output /tmp/dify-plugin
@@ -72,6 +73,8 @@ jobs:
           project = tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))
           assert manifest["version"] == project["project"]["version"]
           assert manifest["author"] == "shisa-ai"
+          assert manifest["meta"]["version"] == "0.0.1"
+          assert manifest["repo"] == "https://github.com/shisa-ai/dify-plugin-shisa-ai-tools"
           provider = yaml.safe_load(pathlib.Path("provider/shisa_ai_tools.yaml").read_text(encoding="utf-8"))
           assert "tools/translate_text.yaml" in provider["tools"]
           print(f"validated plugin {manifest['name']} {manifest['version']}")

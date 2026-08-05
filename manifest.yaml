@@ -1,4 +1,4 @@
-version: 1.0.0
+version: 1.0.1
 type: plugin
 author: shisa-ai
 name: shisa_ai_tools
@@ -8,6 +8,7 @@ label:
 description:
   en_US: Advanced Shisa AI speech and translation tools with dynamic voices and native audio formats.
   ja_JP: 動的な音声一覧、ネイティブ音声形式、日英翻訳に対応したShisa AIツール。
+repo: https://github.com/shisa-ai/dify-plugin-shisa-ai-tools
 created_at: "2026-08-04T00:00:00Z"
 icon: shisa-icon.png
 resource:
@@ -19,7 +20,7 @@ plugins:
   tools:
     - provider/shisa_ai_tools.yaml
 meta:
-  version: 1.0.0
+  version: 0.0.1
   arch:
     - amd64
     - arm64

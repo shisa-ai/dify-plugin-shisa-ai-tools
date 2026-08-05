@@ -15,9 +15,9 @@
 - CI uses `uv sync --frozen --no-install-project` and verifies the lockfile and exported `requirements.txt`.
 - `requirements.txt` is a fully pinned, hashed export for the Dify package surface.
 - Pull-request and main-branch CI build and validate the package without publishing it.
-- Protected `v*` tags invoke `.github/workflows/release.yml`, which publishes the validated `.difypkg`, CycloneDX SBOM, SHA-256 checksums, and GitHub provenance attestations.
+- Protected `v*` tags invoke `.github/workflows/release.yml`, which publishes only the validated `.difypkg`; the package embeds its CycloneDX runtime SBOM and has a GitHub-provided SHA-256 asset digest and provenance attestation.
 - Packaging uses Dify CLI `0.6.6`, released before the resolution cutoff and verified with SHA-256 `1193fff00a1453b7b3b92ae76ff727760bd1aea9e28834e7a43bac602a0ff011`.
-- Generated `.difypkg`, SBOM, and checksum files are excluded from Git.
+- Generated `.difypkg` and root `SBOM.cdx.json` files are excluded from Git.
 
 ## Direct dependencies
 
@@ -57,7 +57,7 @@ The transitive tree, exact versions, artifact URLs, and hashes are recorded in `
 ## Exceptions and open remediation
 
 1. Tools `1.0.0` and its Translation API integration require installation and live validation in a non-production Dify workspace before production rollout.
-2. The repository currently has one maintainer. The `release` environment therefore cannot require independent approval; protected tags, exact tag/version validation, main-ancestry validation, immutable pins, CI checks, checksums, and attestations are the compensating controls. Single-maintainer administrative bypasses must be recorded on the relevant PR or release.
+2. The repository currently has one maintainer. The `release` environment therefore cannot require independent approval; protected tags, exact tag/version validation, main-ancestry validation, immutable pins, CI checks, GitHub asset digests, and attestations are the compensating controls. Single-maintainer administrative bypasses must be recorded on the relevant PR or release.
 3. `pip-audit` has a development-only transitive dependency, `boolean-py`, whose OpenSSF Scorecard is currently 2.8. It is accepted because vulnerability scanning is required; the dependency is version-locked, hash-verified, age-gated, excluded from runtime requirements and the release SBOM, and does not execute in the installed plugin.
 4. Routine Dependabot updates require the seven-day cooldown, lock refresh, tests, and human review. Emergency security updates may use the documented exception.
 
@@ -70,5 +70,5 @@ uv run --frozen python -m unittest discover -s tests -v
 uv run --frozen pip-audit --require-hashes -r requirements.txt
 uv run --frozen python scripts/validate_workflows.py
 uv run --frozen python scripts/generate_sbom.py
-uv run --frozen python scripts/validate_package.py dist/shisa-ai-tools-1.0.0.difypkg
+uv run --frozen python scripts/validate_package.py dist/shisa-ai-tools-1.0.1.difypkg
 ```

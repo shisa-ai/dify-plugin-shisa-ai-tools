@@ -23,6 +23,7 @@ env:
   UV_EXCLUDE_NEWER: "2026-07-29T00:00:00Z"
   DIFY_ADMIN_EMAIL: "admin@shisa.ai"
   DIFY_ADMIN_PASSWORD: "shisa-e2e-local"
+  DIFY_COMPOSE_DIR: "/tmp/dify-src/docker"
 
 jobs:
   dify-e2e:
@@ -58,16 +59,33 @@ jobs:
       - name: Start Dify
         shell: bash
         run: |
-          mkdir -p /tmp/dify
-          curl --fail --silent --show-error --location \
-            "https://raw.githubusercontent.com/langgenius/dify/${DIFY_VERSION}/docker/docker-compose.yaml" \
-            --output /tmp/dify/docker-compose.yaml
-          cat > /tmp/dify/.env <<ENV
-          INIT_PASSWORD=${DIFY_ADMIN_PASSWORD}
-          INIT_EMAIL=${DIFY_ADMIN_EMAIL}
-          INIT_USERNAME=admin
-          ENV
-          docker compose -f /tmp/dify/docker-compose.yaml up -d
+          git clone --depth 1 --branch "${DIFY_VERSION}" \
+            https://github.com/langgenius/dify.git /tmp/dify-src
+          cd "${DIFY_COMPOSE_DIR}"
+          python - <<'PY'
+          import pathlib
+          import secrets
+
+          lines = pathlib.Path(".env.example").read_text(encoding="utf-8").splitlines()
+          out = []
+          for line in lines:
+              if line.startswith("SECRET_KEY="):
+                  out.append("SECRET_KEY=" + secrets.token_hex(16))
+              elif line.startswith("INIT_PASSWORD="):
+                  out.append("INIT_PASSWORD=${DIFY_ADMIN_PASSWORD}")
+              elif line.startswith("FORCE_VERIFYING_SIGNATURE="):
+                  # Mirrors the production workspace where unsigned packages load.
+                  out.append("FORCE_VERIFYING_SIGNATURE=false")
+              else:
+                  out.append(line)
+          # The plugin runtime fetches generated files inside the Docker
+          # network, so file URLs must resolve to the nginx service, not localhost.
+          out.append("INIT_EMAIL=${DIFY_ADMIN_EMAIL}")
+          out.append("INIT_USERNAME=admin")
+          out.append("FILES_URL=http://nginx")
+          pathlib.Path(".env").write_text("\n".join(out) + "\n", encoding="utf-8")
+          PY
+          docker compose -f docker-compose.yaml up -d
       - name: Wait for Dify API
         shell: bash
         run: |
@@ -76,20 +94,25 @@ jobs:
               echo "Dify is ready"
               exit 0
             fi
-            docker compose -f /tmp/dify/docker-compose.yaml ps >/dev/null 2>&1 || true
+            docker compose -f "${DIFY_COMPOSE_DIR}/docker-compose.yaml" ps >/dev/null 2>&1 || true
             sleep 5
           done
           echo "Dify did not become ready" >&2
-          docker compose -f /tmp/dify/docker-compose.yaml logs --tail 200 >&2 || true
+          docker compose -f "${DIFY_COMPOSE_DIR}/docker-compose.yaml" logs --tail 200 >&2 || true
           exit 1
+      - name: Fetch verified fixtures
+        run: |
+          git clone --depth 1 https://github.com/shisa-ai/shisa-dify-workflows.git /tmp/fixtures
       - name: Run Dify E2E harness
         env:
           DIFY_BASE_URL: "http://localhost"
+          DIFY_INIT_PASSWORD: "${{ env.DIFY_ADMIN_PASSWORD }}"
+          SHISA_API_KEY: "${{ secrets.SHISA_API_KEY }}"
           PKG_PATH: "${{ env.package }}"
-          DSL_PATH: "docs/dify-smoke-test/Shisa-AI-Tools-Release-Smoke-Test.yml"
+          DSL_PATH: "/tmp/fixtures/fixtures/shisa-tools-smoke.yml"
         shell: bash
         run: uv run --frozen python scripts/dify_e2e.py
       - name: Teardown Dify
         if: always()
         shell: bash
-        run: docker compose -f /tmp/dify/docker-compose.yaml down -v
+        run: docker compose -f "${DIFY_COMPOSE_DIR}/docker-compose.yaml" down -v

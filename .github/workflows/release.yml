@@ -17,16 +17,16 @@ env:
   DIFY_CLI_VERSION: "0.6.6"
   DIFY_CLI_SHA256: "1193fff00a1453b7b3b92ae76ff727760bd1aea9e28834e7a43bac602a0ff011"
   PACKAGE_BASENAME: "shisa-ai-tools"
+  DIFY_VERSION: "1.16.1"
+  FIXTURES_REPO: "shisa-ai/shisa-dify-workflows"
 
 jobs:
-  release:
+  build-and-test:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: release
     permissions:
-      contents: write
-      id-token: write
-      attestations: write
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -84,16 +84,128 @@ jobs:
           /tmp/dify-plugin plugin package . --output_path "${{ steps.metadata.outputs.package }}"
           uv run --frozen python scripts/validate_package.py "${{ steps.metadata.outputs.package }}"
           python -m json.tool SBOM.cdx.json >/dev/null
+      - name: Upload package artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: package
+          path: |
+            ${{ steps.metadata.outputs.package }}
+            SBOM.cdx.json
+          if-no-files-found: error
+
+  dify-e2e:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: release
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.8.22"
+          enable-cache: false
+      - name: Download package artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: package
+          path: dist
+      - name: Install frozen environment
+        run: uv sync --frozen --no-install-project
+      - name: Resolve package path
+        shell: bash
+        run: |
+          echo "PKG_PATH=$(ls dist/*.difypkg | head -1)" >> "${GITHUB_ENV}"
+      - name: Fetch verified fixtures
+        run: |
+          git clone --depth 1 "https://github.com/${FIXTURES_REPO}.git" /tmp/fixtures
+      - name: Start Dify
+        shell: bash
+        run: |
+          git clone --depth 1 --branch "${DIFY_VERSION}" \
+            https://github.com/langgenius/dify.git /tmp/dify-src
+          cd /tmp/dify-src/docker
+          python - <<'PY'
+          import pathlib
+          import secrets
+
+          lines = pathlib.Path(".env.example").read_text(encoding="utf-8").splitlines()
+          out = []
+          for line in lines:
+              if line.startswith("SECRET_KEY="):
+                  out.append("SECRET_KEY=" + secrets.token_hex(16))
+              elif line.startswith("INIT_PASSWORD="):
+                  out.append("INIT_PASSWORD=${DIFY_ADMIN_PASSWORD}")
+              elif line.startswith("FORCE_VERIFYING_SIGNATURE="):
+                  # Mirrors the production workspace where unsigned packages load.
+                  out.append("FORCE_VERIFYING_SIGNATURE=false")
+              else:
+                  out.append(line)
+          out.append("INIT_EMAIL=${DIFY_ADMIN_EMAIL}")
+          out.append("INIT_USERNAME=admin")
+          # The plugin runtime fetches generated files inside the Docker
+          # network, so file URLs must resolve to the nginx service.
+          out.append("FILES_URL=http://nginx")
+          pathlib.Path(".env").write_text("\n".join(out) + "\n", encoding="utf-8")
+          PY
+          docker compose -f docker-compose.yaml up -d
+      - name: Wait for Dify API
+        shell: bash
+        run: |
+          for i in $(seq 1 120); do
+            if curl --silent --fail "http://localhost/console/api/setup" >/dev/null; then
+              echo "Dify is ready"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Dify did not become ready" >&2
+          docker compose -f /tmp/dify-src/docker/docker-compose.yaml logs --tail 200 >&2 || true
+          exit 1
+      - name: Run Dify E2E harness
+        env:
+          DIFY_BASE_URL: "http://localhost"
+          DIFY_ADMIN_EMAIL: "admin@shisa.ai"
+          DIFY_ADMIN_PASSWORD: "shisa-e2e-local"
+          SHISA_API_KEY: "${{ secrets.SHISA_API_KEY }}"
+          DSL_PATH: "/tmp/fixtures/fixtures/shisa-tools-smoke.yml"
+        shell: bash
+        run: uv run --frozen python scripts/dify_e2e.py
+      - name: Teardown Dify
+        if: always()
+        shell: bash
+        run: docker compose -f /tmp/dify-src/docker/docker-compose.yaml down -v
+
+  publish:
+    needs: [build-and-test, dify-e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Download package artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: package
+          path: dist
       - name: Attest package provenance
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
-          subject-path: ${{ steps.metadata.outputs.package }}
+          subject-path: "dist/*.difypkg"
       - name: Publish release assets
         env:
           GH_TOKEN: ${{ github.token }}
-          PACKAGE: ${{ steps.metadata.outputs.package }}
         shell: bash
         run: |
+          PACKAGE="$(ls dist/*.difypkg | head -1)"
           gh release create "${GITHUB_REF_NAME}" \
             "${PACKAGE}" \
             --verify-tag \

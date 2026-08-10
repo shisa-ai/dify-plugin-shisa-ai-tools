@@ -8,14 +8,17 @@ Runs against a live Dify instance started by the CI job (GitHub runner):
 
 Environment:
   DIFY_BASE_URL        e.g. http://localhost
-  DIFY_ADMIN_EMAIL     admin account created by Dify INIT_* env
-  DIFY_ADMIN_PASSWORD
+  DIFY_ADMIN_EMAIL     admin account email
+  DIFY_ADMIN_PASSWORD  admin password (plaintext for /setup, Base64 for /login)
+  DIFY_INIT_PASSWORD   optional; the INIT_PASSWORD gate for self-hosted Dify
+  SHISA_API_KEY        Shisa AI API key used to configure the Tools plugin credentials
   PKG_PATH             path to the built .difypkg
   DSL_PATH             path to the verified workflow .yml
 """
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import sys
@@ -23,6 +26,26 @@ import time
 from pathlib import Path
 
 import httpx
+
+
+def _load_env_file(path: str = ".env.e2e") -> None:
+    """Load credentials from a local env file into os.environ without
+    overriding variables that are already set (e.g. GitHub Actions env)."""
+    env_file = Path(path)
+    if not env_file.is_file():
+        return
+    for raw in env_file.read_text(encoding="utf-8-sig").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+_load_env_file()
 
 SPEECH_TEXT = "シーサ・エーアイの音声認識と音声合成をテストします。"
 TRANSLATION_TEXT = "Shisa AIの音声ツールをテストします。"
@@ -85,20 +108,45 @@ def main() -> int:
     client = httpx.Client(base_url=base, timeout=120.0)
     _wait("Dify API to be reachable", lambda: client.get("/console/api/setup").status_code < 500)
 
-    # Setup the initial admin account (idempotent) and log in.
-    client.post(
-        "/console/api/setup",
-        json={"email": email, "name": "admin", "password": password},
-    )
+    password_b64 = base64.b64encode(password.encode("utf-8")).decode("ascii")
+    init_password = os.environ.get("DIFY_INIT_PASSWORD", "").strip() or password
+
+    # Self-hosted Dify gates setup with an INIT_PASSWORD (plaintext).
+    init_status = client.get("/console/api/init").json()
+    if init_status.get("status") == "not_started":
+        init = client.post(
+            "/console/api/init",
+            json={"password": init_password},
+        )
+        if init.status_code >= 400 and init.status_code != 409:
+            init.raise_for_status()
+
+    # /setup stores the password as-is (plaintext); /login Base64-encodes it.
+    setup_status = client.get("/console/api/setup").json()
+    if setup_status.get("step") == "not_started":
+        setup = client.post(
+            "/console/api/setup",
+            json={"email": email, "name": "admin", "password": password},
+        )
+        if setup.status_code >= 400 and setup.status_code != 409:
+            setup.raise_for_status()
+
     login = client.post(
         "/console/api/login",
-        json={"email": email, "password": password, "remember_me": True},
+        json={"email": email, "password": password_b64, "remember_me": True},
     )
-    login.raise_for_status()
-    token = login.json()["data"]["access_token"]
-    headers = {"Authorization": f"Bearer {token}"}
+    if login.status_code != 200:
+        raise SystemExit(f"login failed ({login.status_code}): {login.text[:300]}")
 
-    # Upload the plugin package and install it.
+    # Console session is cookie-based; subsequent requests need the CSRF token.
+    csrf = client.cookies.get("csrf_token")
+    if not csrf:
+        raise SystemExit("no csrf_token cookie after login")
+    headers = {
+        "X-CSRF-Token": csrf,
+    }
+
+    # Upload the plugin package and install it (skip if already installed).
     with pkg.open("rb") as handle:
         upload = client.post(
             "/console/api/workspaces/current/plugin/upload/pkg",
@@ -112,22 +160,48 @@ def main() -> int:
         for item in upload_payload.get("installations", [])
         if item.get("plugin_unique_identifier")
     ]
+    single = upload_payload.get("unique_identifier")
+    if single:
+        identifiers = [single]
     if not identifiers:
         raise SystemExit(
             f"could not read plugin identifiers from upload: {json.dumps(upload_payload)[:400]}"
         )
 
-    install = client.post(
-        "/console/api/workspaces/current/plugin/install/pkg",
+    if not _plugin_installed(client, headers, identifiers[0]):
+        install = client.post(
+            "/console/api/workspaces/current/plugin/install/pkg",
+            headers=headers,
+            json={"plugin_unique_identifiers": identifiers},
+        )
+        install.raise_for_status()
+        install_payload = install.json()
+        if not install_payload.get("all_installed"):
+            # Some Dify versions return an async task; some install synchronously.
+            # Wait on the plugin list rather than the task status, which is not
+            # consistently populated across versions.
+            _wait("plugin install", lambda: _plugin_installed(client, headers, identifiers[0]))
+
+    # Configure the plugin tool provider credentials so the workflow nodes can
+    # call the Shisa AI API. The key is read from the environment, never printed.
+    shisa_key = os.environ.get("SHISA_API_KEY", "").strip()
+    if not shisa_key:
+        raise SystemExit("SHISA_API_KEY is required to configure tool provider credentials")
+    tool_provider = f"{identifiers[0].split('@')[0].split(':')[0]}/{identifiers[0].split('/')[-1].split(':')[0]}"
+    creds = client.post(
+        f"/console/api/workspaces/current/tool-provider/builtin/{tool_provider}/add",
         headers=headers,
-        json={"plugin_unique_identifiers": identifiers},
+        json={
+            "credentials": {
+                "api_key": shisa_key,
+                "api_base": "https://api.shisa.ai",
+            },
+            "name": "release-e2e",
+            "type": "api-key",
+        },
     )
-    install.raise_for_status()
-    task_id = install.json().get("task_id")
-    if task_id:
-        _wait("plugin install", lambda: _task_done(client, headers, task_id))
-    else:
-        _wait("plugin install", lambda: _plugin_installed(client, headers, identifiers[0]))
+    if creds.status_code >= 400 and creds.status_code != 409 and "already used" not in creds.text and "already exists" not in creds.text:
+        creds.raise_for_status()
 
     # Import the verified workflow DSL.
     imported = client.post(
@@ -156,13 +230,22 @@ def main() -> int:
     if not app_id:
         raise SystemExit(f"no app_id from import: {json.dumps(imported.json())[:400]}")
 
+    # Publish the imported workflow so the service API can run it.
+    publish = client.post(
+        f"/console/api/apps/{app_id}/workflows/publish",
+        headers=headers,
+        json={"marked_name": "release-smoke", "marked_comment": "automated release e2e"},
+    )
+    if publish.status_code >= 400 and publish.status_code != 409:
+        publish.raise_for_status()
+
     # Publish API access and create a service API key.
     client.post(f"/console/api/apps/{app_id}/api-enable", headers=headers)
     key_response = client.post(f"/console/api/apps/{app_id}/api-keys", headers=headers)
     key_response.raise_for_status()
-    api_key = key_response.json().get("api_key")
+    api_key = key_response.json().get("api_key") or key_response.json().get("token")
     if not api_key:
-        raise SystemExit(f"no api_key from create: {json.dumps(key_response.json())[:400]}")
+        raise SystemExit(f"no api key from create: {json.dumps(key_response.json())[:400]}")
 
     # Run the workflow through the public service API.
     run = client.post(

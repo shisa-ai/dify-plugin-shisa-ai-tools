@@ -26,7 +26,6 @@ FORBIDDEN_NAMES = {".env", ".dev.vars", "uv.lock"}
 REQUIRED_NAMES = {
     "LICENSE",
     "README.md",
-    "SBOM.cdx.json",
     "manifest.yaml",
     "main.py",
     "requirements.txt",

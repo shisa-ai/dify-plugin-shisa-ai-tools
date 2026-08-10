@@ -1,0 +1,95 @@
+name: Dify E2E
+
+# Automates the previously-manual step: install the built plugin into a real
+# Dify instance, import the verified workflow, run it, and assert the outputs.
+# Dify is started and destroyed entirely inside this GitHub runner.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: dify-e2e-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  DIFY_VERSION: "1.16.1"
+  DIFY_CLI_VERSION: "0.6.6"
+  DIFY_CLI_SHA256: "1193fff00a1453b7b3b92ae76ff727760bd1aea9e28834e7a43bac602a0ff011"
+  UV_EXCLUDE_NEWER: "2026-07-29T00:00:00Z"
+  DIFY_ADMIN_EMAIL: "admin@shisa.ai"
+  DIFY_ADMIN_PASSWORD: "shisa-e2e-local"
+
+jobs:
+  dify-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.8.22"
+          enable-cache: false
+      - name: Install frozen environment
+        run: uv sync --frozen --no-install-project
+      - name: Install Dify packaging CLI
+        shell: bash
+        run: |
+          curl --fail --silent --show-error --location \
+            "https://github.com/langgenius/dify-plugin-daemon/releases/download/${DIFY_CLI_VERSION}/dify-plugin-linux-amd64" \
+            --output /tmp/dify-plugin
+          echo "${DIFY_CLI_SHA256}  /tmp/dify-plugin" | sha256sum --check --strict
+          chmod 0755 /tmp/dify-plugin
+          /tmp/dify-plugin version
+      - name: Build plugin package
+        shell: bash
+        run: |
+          mkdir -p dist
+          VERSION="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          /tmp/dify-plugin plugin package . --output_path "dist/shisa-ai-tools-${VERSION}.difypkg"
+          echo "package=dist/shisa-ai-tools-${VERSION}.difypkg" >> "${GITHUB_ENV}"
+      - name: Start Dify
+        shell: bash
+        run: |
+          mkdir -p /tmp/dify
+          curl --fail --silent --show-error --location \
+            "https://raw.githubusercontent.com/langgenius/dify/${DIFY_VERSION}/docker/docker-compose.yaml" \
+            --output /tmp/dify/docker-compose.yaml
+          cat > /tmp/dify/.env <<ENV
+          INIT_PASSWORD=${DIFY_ADMIN_PASSWORD}
+          INIT_EMAIL=${DIFY_ADMIN_EMAIL}
+          INIT_USERNAME=admin
+          ENV
+          docker compose -f /tmp/dify/docker-compose.yaml up -d
+      - name: Wait for Dify API
+        shell: bash
+        run: |
+          for i in $(seq 1 120); do
+            if curl --silent --fail "http://localhost/console/api/setup" >/dev/null; then
+              echo "Dify is ready"
+              exit 0
+            fi
+            docker compose -f /tmp/dify/docker-compose.yaml ps >/dev/null 2>&1 || true
+            sleep 5
+          done
+          echo "Dify did not become ready" >&2
+          docker compose -f /tmp/dify/docker-compose.yaml logs --tail 200 >&2 || true
+          exit 1
+      - name: Run Dify E2E harness
+        env:
+          DIFY_BASE_URL: "http://localhost"
+          PKG_PATH: "${{ env.package }}"
+          DSL_PATH: "docs/dify-smoke-test/Shisa-AI-Tools-Release-Smoke-Test.yml"
+        shell: bash
+        run: uv run --frozen python scripts/dify_e2e.py
+      - name: Teardown Dify
+        if: always()
+        shell: bash
+        run: docker compose -f /tmp/dify/docker-compose.yaml down -v

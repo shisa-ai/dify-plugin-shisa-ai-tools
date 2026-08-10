@@ -31,6 +31,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      - name: Guard: only admins may dispatch manually
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          perms="$(gh api "repos/${GITHUB_REPOSITORY}/collaborators/${GITHUB_ACTOR}/permission" --jq .permission 2>/dev/null)" || {
+            echo "::error::could not verify dispatcher permission"
+            exit 1
+          }
+          echo "actor=${GITHUB_ACTOR} permission=${perms}"
+          if [ "${perms}" != "admin" ]; then
+            echo "::error::only repository admins may trigger this workflow"
+            exit 1
+          fi
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:

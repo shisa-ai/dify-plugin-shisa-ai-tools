@@ -75,7 +75,13 @@ jobs:
         run: |
           mkdir -p unpacked_plugin
           unzip "${PACKAGE}" -d unpacked_plugin
-          echo "PLUGIN_PATH=unpacked_plugin" >> "${GITHUB_ENV}"
+          echo "PLUGIN_PATH=${GITHUB_WORKSPACE}/unpacked_plugin" >> "${GITHUB_ENV}"
+
+      - name: Debug scan target
+        run: |
+          echo "pwd=$(pwd)"
+          echo "PLUGIN_PATH=${PLUGIN_PATH}"
+          ls -la "${PLUGIN_PATH}" | head -5
 
       - name: Run official marketplace checks
         run: |

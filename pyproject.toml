@@ -1,6 +1,6 @@
 [project]
 name = "dify-shisa-ai-tools"
-version = "1.0.2"
+version = "1.0.3"
 description = "Advanced Shisa AI speech tools for Dify"
 readme = "README.md"
 requires-python = ">=3.12"

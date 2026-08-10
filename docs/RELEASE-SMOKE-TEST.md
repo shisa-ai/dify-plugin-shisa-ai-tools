@@ -72,3 +72,4 @@ Commit only DSLs that have passed a real **Dify import → execution → re-expo
 cycle. Re-import `Shisa-AI-Tools-Release-Smoke-Test.yml` into the target Dify
 version, run it, then commit the re-exported baseline so the file stays
 byte-for-byte what Dify produced.
+// ci trigger

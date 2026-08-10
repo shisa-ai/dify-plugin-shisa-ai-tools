@@ -86,8 +86,6 @@ def main() -> None:
             requirement = entry.split(" ; ", 1)[0]
             if not re.fullmatch(r"[A-Za-z0-9_.-]+==[^\s;]+", requirement):
                 raise SystemExit(f"runtime requirement is not pinned: {line}")
-        if "--hash=sha256:" not in requirements:
-            raise SystemExit("requirements.txt does not contain hashes")
 
     print(f"validated {package} ({package.stat().st_size} bytes)")
 

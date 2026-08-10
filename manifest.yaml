@@ -9,6 +9,8 @@ description:
   en_US: Advanced Shisa AI transcription, speech, and translation tools with per-node ASR controls, dynamic voices, and native audio formats.
   ja_JP: ノード単位ASR設定、動的な音声一覧、ネイティブ音声形式、日英翻訳に対応したShisa AIツール。
 repo: https://github.com/shisa-ai/dify-plugin-shisa-ai-tools
+privacy: PRIVACY.md
+contact: contact@shisa.ai
 created_at: "2026-08-04T00:00:00Z"
 icon: shisa-icon.png
 resource:
@@ -21,6 +23,7 @@ plugins:
     - provider/shisa_ai_tools.yaml
 meta:
   version: 0.0.1
+  minimum_dify_version: 1.16.1
   arch:
     - amd64
     - arm64

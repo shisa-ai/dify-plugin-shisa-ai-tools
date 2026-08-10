@@ -11,15 +11,6 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - "main.py"
-      - "shisa_client.py"
-      - "provider/**"
-      - "tools/**"
-      - "manifest.yaml"
-      - "pyproject.toml"
-      - "requirements.txt"
-      - "uv.lock"
   workflow_dispatch:
 
 concurrency:

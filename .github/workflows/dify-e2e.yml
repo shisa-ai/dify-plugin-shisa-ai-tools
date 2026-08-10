@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - name: Guard: only admins may dispatch manually
+      - name: "Guard: only admins may dispatch manually"
         if: github.event_name == 'workflow_dispatch'
         shell: bash
         env:

@@ -183,10 +183,14 @@ def main() -> int:
             _wait("plugin install", lambda: _plugin_installed(client, headers, identifiers[0]))
 
     # Configure the plugin tool provider credentials so the workflow nodes can
-    # call the Shisa AI API. The key is read from the environment, never printed.
+    # call the Shisa AI API. In structural mode a placeholder key is enough
+    # because the real API calls are not asserted. The key is never printed.
+    structural = os.environ.get("STRUCTURAL", "").strip().lower() in ("1", "true", "yes")
     shisa_key = os.environ.get("SHISA_API_KEY", "").strip()
-    if not shisa_key:
+    if not shisa_key and not structural:
         raise SystemExit("SHISA_API_KEY is required to configure tool provider credentials")
+    if not shisa_key:
+        shisa_key = "sk-structural-placeholder"
     tool_provider = f"{identifiers[0].split('@')[0].split(':')[0]}/{identifiers[0].split('/')[-1].split(':')[0]}"
     creds = client.post(
         f"/console/api/workspaces/current/tool-provider/builtin/{tool_provider}/add",
@@ -263,6 +267,32 @@ def main() -> int:
     run.raise_for_status()
     data = run.json().get("data", {})
     if data.get("status") != "succeeded":
+        error = str(data.get("error", "")).lower()
+        if structural:
+            # In structural mode an API-boundary failure is expected with the
+            # placeholder key. Only structural problems fail the check.
+            structural_markers = (
+                "no default provider",
+                "not found",
+                "tool runtime",
+                "dsl",
+                "import",
+                "invalid file",
+            )
+            if any(marker in error for marker in structural_markers):
+                raise SystemExit(f"structural failure: {json.dumps(data, ensure_ascii=False)[:800]}")
+            print(
+                json.dumps(
+                    {
+                        "status": "succeeded-structural",
+                        "workflow_run_id": data.get("id"),
+                        "note": "pipeline reached the API boundary; real-API assertions skipped (fork PR, no secret)",
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+            return 0
         raise SystemExit(f"workflow run failed: {json.dumps(data, ensure_ascii=False)[:800]}")
 
     outputs = data.get("outputs", {})

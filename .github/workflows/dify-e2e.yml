@@ -31,8 +31,8 @@ env:
 
 jobs:
   dify-e2e:
-    # Fork PRs have no secrets and cannot run the E2E; skip them entirely.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # Fork PRs run in structural mode (no secrets); same-repo PRs, tags and
+    # manual dispatches run the full mode with real API assertions.
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -130,6 +130,7 @@ jobs:
           DIFY_BASE_URL: "http://localhost"
           DIFY_INIT_PASSWORD: "${{ env.DIFY_ADMIN_PASSWORD }}"
           SHISA_API_KEY: "${{ secrets.SHISA_API_KEY }}"
+          STRUCTURAL: "${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}"
           PKG_PATH: "${{ env.package }}"
           DSL_PATH: "/tmp/fixtures/fixtures/shisa-tools-smoke.yml"
         shell: bash

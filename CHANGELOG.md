@@ -2,6 +2,20 @@
 
 All notable user-visible changes are documented here.
 
+## [1.0.2] - 2026-08-10
+
+### Added
+
+- Add **Transcribe Audio** with per-node language, hotwords, temperature, `top_p`, frequency penalty, repetition penalty, and VAD controls.
+- Return transcript text and the complete structured ASR response, including language and confidence when supplied by the API.
+- Add 21 deterministic regression tests covering every Tools node, stable request schemas, native audio preservation, voice resolution, exact `[Music]` handling, and Translation output privacy.
+- Add a credentialed protected-release smoke test that exercises live voice discovery, TTS, ASR with every documented optional parameter, and Translation before packaging.
+- Add a Dify post-install workflow specification and pass criteria for release verification.
+
+### Changed
+
+- Omit blank optional transcription parameters so the documented Shisa API defaults remain authoritative.
+
 ## [1.0.1] - 2026-08-05
 
 ### Changed

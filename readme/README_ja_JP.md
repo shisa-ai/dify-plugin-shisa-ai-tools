@@ -6,6 +6,7 @@ Shisa AIの高度な音声機能と翻訳APIをDify Workflow／Chatflowから利
 
 - **TTS音声一覧**: 現在の音声、UUID、言語、対応形式、ストリーミング対応状況を動的に取得します。
 - **音声生成**: 読みやすい音声説明またはUUIDを使い、対応するMP3、WAV、OGG、FLAC、PCMを完了ファイルとして生成します。
+- **音声を文字起こし**: WAV、OGG、MP3、FLAC音声を文字起こしし、ノードごとに言語、ホットワード、temperature、`top_p`、frequency penalty、repetition penalty、VADを設定できます。空欄の任意値は送信せず、Shisa APIデフォルトを使用します。
 - **テキスト翻訳**: Shisa Translation APIを使い、日本語と英語の間を翻訳します。
 
 Dify Toolノードは同期実行のため、音声生成と翻訳では非ストリーミングの完了レスポンスを使用します。

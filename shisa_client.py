@@ -3,6 +3,50 @@ from typing import Any
 import httpx
 
 
+def normalize_transcript(value: str) -> str:
+    """Suppress only the exact case-insensitive [Music] marker."""
+    transcript = value.strip()
+    return "" if transcript.casefold() == "[music]" else transcript
+
+
+def parse_hotwords(value: Any) -> list[str]:
+    """Accept a JSON array, Python string list, or comma/newline-separated text."""
+    import json
+
+    if value is None or value == "":
+        return []
+    if isinstance(value, list):
+        if not all(isinstance(item, str) for item in value):
+            raise ValueError("Hotwords must contain only strings")
+        hotwords = [item.strip() for item in value if item.strip()]
+    else:
+        raw = str(value).strip()
+        if not raw:
+            return []
+        if raw.startswith("["):
+            try:
+                parsed = json.loads(raw)
+            except json.JSONDecodeError as error:
+                raise ValueError(
+                    "Hotwords must be valid JSON or a comma/newline-separated list"
+                ) from error
+            if not isinstance(parsed, list) or not all(
+                isinstance(item, str) for item in parsed
+            ):
+                raise ValueError("Hotwords JSON must be an array of strings")
+            hotwords = [item.strip() for item in parsed if item.strip()]
+        else:
+            hotwords = [
+                item.strip()
+                for line in raw.splitlines()
+                for item in line.split(",")
+                if item.strip()
+            ]
+    if not hotwords:
+        raise ValueError("Hotwords must contain at least one word or phrase")
+    return hotwords
+
+
 def api_base(credentials: dict[str, Any]) -> str:
     return str(credentials.get("api_base") or "https://api.shisa.ai").rstrip("/")
 
@@ -124,6 +168,55 @@ def translate_text(
     if not isinstance(translation, str) or not translation.strip():
         raise ValueError("Shisa AI returned an empty translation")
     return translation
+
+
+def transcribe_audio(
+    credentials: dict[str, Any],
+    audio: bytes,
+    *,
+    language: str | None = None,
+    hotwords: list[str] | None = None,
+    temperature: float | None = None,
+    top_p: float | None = None,
+    frequency_penalty: float | None = None,
+    repetition_penalty: float | None = None,
+    vad: int | None = None,
+) -> dict[str, Any]:
+    """Transcribe audio using only explicitly supplied optional ASR parameters."""
+    import base64
+
+    if not audio:
+        raise ValueError("Audio file must not be empty")
+    payload: dict[str, Any] = {
+        "audio": base64.b64encode(audio).decode("ascii")
+    }
+    optional = {
+        "language": language.strip() if language else None,
+        "hotwords": hotwords or None,
+        "temperature": temperature,
+        "top_p": top_p,
+        "frequency_penalty": frequency_penalty,
+        "repetition_penalty": repetition_penalty,
+        "vad": vad,
+    }
+    payload.update({key: value for key, value in optional.items() if value is not None})
+    try:
+        response = httpx.post(
+            f"{api_base(credentials)}/asr/srt/audio_llm",
+            headers=headers(credentials),
+            json=payload,
+            timeout=300.0,
+        )
+    except (httpx.ConnectError, httpx.TimeoutException) as error:
+        raise ValueError(f"Could not connect to Shisa AI: {error}") from error
+    raise_for_status(response)
+    try:
+        result = response.json()
+    except ValueError as error:
+        raise ValueError("Shisa AI returned an invalid ASR response") from error
+    if not isinstance(result, dict) or not isinstance(result.get("text"), str):
+        raise ValueError("Shisa AI returned an invalid ASR response")
+    return result
 
 
 def generate_speech(

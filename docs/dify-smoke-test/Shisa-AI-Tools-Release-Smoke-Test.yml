@@ -1,0 +1,398 @@
+app:
+  description: End-to-end release smoke test for every Shisa AI Tools node.
+  icon: 🧪
+  icon_background: '#E8F5E9'
+  icon_type: emoji
+  mode: workflow
+  name: Shisa AI Tools Release Smoke Test
+  use_icon_as_answer_icon: false
+dependencies: []
+kind: app
+version: 0.7.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      allowed_file_extensions: []
+      allowed_file_types: []
+      allowed_file_upload_methods:
+      - local_file
+      - remote_url
+      enabled: false
+      fileUploadConfig:
+        audio_file_size_limit: 50
+        batch_count_limit: 5
+        file_size_limit: 15
+        image_file_size_limit: 10
+        video_file_size_limit: 100
+        workflow_file_upload_limit: 10
+      image:
+        enabled: false
+        number_limits: 3
+        transfer_methods:
+        - local_file
+        - remote_url
+      number_limits: 3
+    opening_statement: ''
+    retriever_resource:
+      enabled: false
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+    - data: {isInIteration: false, isInLoop: false, sourceType: start, targetType: tool}
+      id: start-source-list-target
+      source: start
+      sourceHandle: source
+      target: list_voices
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data: {isInIteration: false, isInLoop: false, sourceType: tool, targetType: code}
+      id: list-source-select-target
+      source: list_voices
+      sourceHandle: source
+      target: select_voice
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data: {isInIteration: false, isInLoop: false, sourceType: code, targetType: tool}
+      id: select-source-generate-target
+      source: select_voice
+      sourceHandle: source
+      target: generate_speech
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data: {isInIteration: false, isInLoop: false, sourceType: tool, targetType: tool}
+      id: generate-source-asr-full-target
+      source: generate_speech
+      sourceHandle: source
+      target: asr_full
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data: {isInIteration: false, isInLoop: false, sourceType: tool, targetType: tool}
+      id: asr-full-source-asr-defaults-target
+      source: asr_full
+      sourceHandle: source
+      target: asr_defaults
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data: {isInIteration: false, isInLoop: false, sourceType: tool, targetType: tool}
+      id: asr-defaults-source-translate-target
+      source: asr_defaults
+      sourceHandle: source
+      target: translate
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data: {isInIteration: false, isInLoop: false, sourceType: tool, targetType: end}
+      id: translate-source-end-target
+      source: translate
+      sourceHandle: source
+      target: end
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    nodes:
+    - data:
+        desc: Inputs are deterministic so the published Workflow API can run this test automatically.
+        selected: false
+        title: Start
+        type: start
+        variables:
+        - label: Speech text
+          max_length: 1000
+          options: []
+          required: true
+          type: paragraph
+          variable: speech_text
+        - label: Translation text
+          max_length: 1000
+          options: []
+          required: true
+          type: paragraph
+          variable: translation_text
+      height: 142
+      id: start
+      position: {x: 80, y: 300}
+      positionAbsolute: {x: 80, y: 300}
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        desc: Exercise dynamic voice discovery; only current Japanese WAV voices may pass.
+        provider_id: shisa-ai/shisa_ai_tools/shisa_ai_tools
+        provider_name: shisa-ai/shisa_ai_tools/shisa_ai_tools
+        provider_type: builtin
+        selected: false
+        title: List Japanese WAV Voices
+        tool_configurations:
+          format:
+            type: constant
+            value: wav
+        tool_description: Dynamically list Shisa AI TTS voices and capabilities.
+        tool_label: List TTS Voices
+        tool_name: list_voices
+        tool_node_version: '2'
+        tool_parameters:
+          language:
+            type: mixed
+            value: ja
+          search:
+            type: mixed
+            value: ''
+        type: tool
+      height: 142
+      id: list_voices
+      position: {x: 380, y: 300}
+      positionAbsolute: {x: 380, y: 300}
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        code: |-
+          import json
+
+          def main(voices) -> dict:
+              if isinstance(voices, str):
+                  voices = json.loads(voices)
+
+              def flatten(value):
+                  if isinstance(value, dict):
+                      if value.get("id"):
+                          return [value]
+                      nested = value.get("voices", value.get("data", []))
+                      return flatten(nested)
+                  if isinstance(value, list):
+                      result = []
+                      for item in value:
+                          result.extend(flatten(item))
+                      return result
+                  return []
+
+              voices = flatten(voices)
+              if not voices:
+                  raise ValueError("List TTS Voices returned no Japanese WAV voices")
+              for voice in voices:
+                  formats = [str(value).lower() for value in voice.get("formats", [])]
+                  if voice.get("id") and "wav" in formats:
+                      return {
+                          "voice_id": str(voice["id"]),
+                          "voice_name": str(voice.get("displayName") or voice.get("name") or voice["id"]),
+                          "voice_count": len(voices),
+                      }
+              raise ValueError("No dynamically discovered Japanese voice supports WAV")
+        code_language: python3
+        desc: Select a current voice dynamically; no fixed voice UUID is stored in the workflow.
+        outputs:
+          voice_count: {children: null, type: number}
+          voice_id: {children: null, type: string}
+          voice_name: {children: null, type: string}
+        selected: false
+        title: Select Dynamic Voice
+        type: code
+        variables:
+        - value_selector: [list_voices, json]
+          value_type: array[object]
+          variable: voices
+      height: 98
+      id: select_voice
+      position: {x: 680, y: 300}
+      positionAbsolute: {x: 680, y: 300}
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        desc: Generate a native WAV file using the dynamically selected current voice.
+        provider_id: shisa-ai/shisa_ai_tools/shisa_ai_tools
+        provider_name: shisa-ai/shisa_ai_tools/shisa_ai_tools
+        provider_type: builtin
+        selected: false
+        title: Generate Native WAV
+        tool_configurations:
+          format:
+            type: constant
+            value: wav
+        tool_description: Generate native speech with a Shisa AI voice.
+        tool_label: Generate Speech
+        tool_name: generate_speech
+        tool_node_version: '2'
+        tool_parameters:
+          text:
+            type: mixed
+            value: '{{#start.speech_text#}}'
+          voice_id:
+            type: mixed
+            value: '{{#select_voice.voice_id#}}'
+        type: tool
+      height: 142
+      id: generate_speech
+      position: {x: 980, y: 300}
+      positionAbsolute: {x: 980, y: 300}
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        desc: Exercise every documented optional ASR parameter.
+        provider_id: shisa-ai/shisa_ai_tools/shisa_ai_tools
+        provider_name: shisa-ai/shisa_ai_tools/shisa_ai_tools
+        provider_type: builtin
+        selected: false
+        title: Transcribe — All Parameters
+        tool_configurations: {}
+        tool_description: Transcribe audio with all documented Shisa ASR controls.
+        tool_label: Transcribe Audio
+        tool_name: transcribe_audio
+        tool_node_version: '2'
+        tool_parameters:
+          audio:
+            type: variable
+            value: [generate_speech, files]
+          frequency_penalty: {type: constant, value: 0.5}
+          hotwords:
+            type: mixed
+            value: '["Shisa AI","Shisa V2.1","Dify"]'
+          language: {type: mixed, value: ja}
+          repetition_penalty: {type: constant, value: 1.05}
+          temperature: {type: constant, value: 0.0}
+          top_p: {type: constant, value: 0.85}
+          vad: {type: constant, value: 1}
+        type: tool
+      height: 298
+      id: asr_full
+      position: {x: 1280, y: 220}
+      positionAbsolute: {x: 1280, y: 220}
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        desc: Regression path proving blank optional fields preserve Shisa API defaults.
+        provider_id: shisa-ai/shisa_ai_tools/shisa_ai_tools
+        provider_name: shisa-ai/shisa_ai_tools/shisa_ai_tools
+        provider_type: builtin
+        selected: false
+        title: Transcribe — API Defaults
+        tool_configurations: {}
+        tool_description: Transcribe the same audio while omitting every optional ASR field.
+        tool_label: Transcribe Audio
+        tool_name: transcribe_audio
+        tool_node_version: '2'
+        tool_parameters:
+          audio:
+            type: variable
+            value: [generate_speech, files]
+          frequency_penalty: {type: mixed, value: ''}
+          hotwords: {type: mixed, value: ''}
+          language: {type: mixed, value: ''}
+          repetition_penalty: {type: mixed, value: ''}
+          temperature: {type: mixed, value: ''}
+          top_p: {type: mixed, value: ''}
+          vad: {type: mixed, value: ''}
+        type: tool
+      height: 298
+      id: asr_defaults
+      position: {x: 1580, y: 220}
+      positionAbsolute: {x: 1580, y: 220}
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        desc: Exercise deterministic Japanese-to-English Translation.
+        provider_id: shisa-ai/shisa_ai_tools/shisa_ai_tools
+        provider_name: shisa-ai/shisa_ai_tools/shisa_ai_tools
+        provider_type: builtin
+        selected: false
+        title: Translate Japanese to English
+        tool_configurations: {}
+        tool_description: Translate text between Japanese and English.
+        tool_label: Translate Text
+        tool_name: translate_text
+        tool_node_version: '2'
+        tool_parameters:
+          source_lang: {type: constant, value: ja}
+          target_lang: {type: constant, value: en}
+          text:
+            type: mixed
+            value: '{{#start.translation_text#}}'
+        type: tool
+      height: 168
+      id: translate
+      position: {x: 1880, y: 300}
+      positionAbsolute: {x: 1880, y: 300}
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        desc: Every output is exposed for automated release assertions.
+        outputs:
+        - value_selector: [select_voice, voice_count]
+          value_type: number
+          variable: voice_count
+        - value_selector: [select_voice, voice_id]
+          value_type: string
+          variable: selected_voice_id
+        - value_selector: [select_voice, voice_name]
+          value_type: string
+          variable: selected_voice_name
+        - value_selector: [generate_speech, files]
+          value_type: array[file]
+          variable: generated_audio
+        - value_selector: [asr_full, text]
+          value_type: string
+          variable: asr_full_text
+        - value_selector: [asr_full, json]
+          value_type: object
+          variable: asr_full_json
+        - value_selector: [asr_defaults, text]
+          value_type: string
+          variable: asr_defaults_text
+        - value_selector: [asr_defaults, json]
+          value_type: object
+          variable: asr_defaults_json
+        - value_selector: [translate, text]
+          value_type: string
+          variable: translation
+        selected: false
+        title: End
+        type: end
+      height: 298
+      id: end
+      position: {x: 2180, y: 220}
+      positionAbsolute: {x: 2180, y: 220}
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    viewport:
+      x: -100
+      y: 100
+      zoom: 0.55
+  rag_pipeline_variables: []

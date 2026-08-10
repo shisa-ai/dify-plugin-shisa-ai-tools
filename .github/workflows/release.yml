@@ -57,6 +57,16 @@ jobs:
           uv run --frozen pip-audit --require-hashes -r requirements.txt
           uv run --frozen python -m unittest discover -s tests -v
           uv run --frozen python scripts/validate_workflows.py
+      - name: Run credentialed live API smoke test
+        env:
+          SHISA_API_KEY: ${{ secrets.SHISA_API_KEY }}
+        shell: bash
+        run: |
+          if [ -z "${SHISA_API_KEY}" ]; then
+            echo "::error::The protected release environment must provide SHISA_API_KEY"
+            exit 1
+          fi
+          uv run --frozen python scripts/live_smoke_test.py
       - name: Install verified Dify packaging CLI
         shell: bash
         run: |

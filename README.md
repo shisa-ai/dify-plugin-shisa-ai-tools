@@ -36,7 +36,7 @@ Current prices, quotas, available voices, formats, and service behavior can chan
 
 ## Installation
 
-1. Download `shisa-ai-tools-1.0.1.difypkg` from the [v1.0.1 GitHub Release](https://github.com/shisa-ai/dify-plugin-shisa-ai-tools/releases/tag/v1.0.1).
+1. Download `shisa-ai-tools-1.0.2.difypkg` from the [v1.0.2 GitHub Release](https://github.com/shisa-ai/dify-plugin-shisa-ai-tools/releases/tag/v1.0.2).
 2. Optionally verify its GitHub-provided SHA-256 digest and provenance attestation.
 3. In Dify, open **Plugins**, choose installation from a local package, and upload the file.
 4. Configure the Tools provider with your Shisa AI API key.

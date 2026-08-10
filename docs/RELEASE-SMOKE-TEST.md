@@ -1,6 +1,7 @@
-# Release smoke-test workflow
+# Release smoke-test
 
-This release gate covers every Shisa AI Tools node and the regressions that must not return.
+Every Tools release must prove the nodes work against the live Shisa API and the
+real Dify workflow before the package is published.
 
 ## Automated protected-release gate
 
@@ -8,7 +9,9 @@ The protected GitHub `release` environment must contain:
 
 - Secret `SHISA_API_KEY`: a limited test-account API key.
 
-The voice is selected dynamically from the current catalogue. The test prefers a Japanese voice and WAV, then falls back only to another currently advertised ASR-compatible native format.
+The voice is selected dynamically from the current catalogue. The test prefers a
+Japanese voice and WAV, then falls back only to another currently advertised
+ASR-compatible native format.
 
 Every protected `v*` tag runs:
 
@@ -17,78 +20,53 @@ uv run --frozen python -m unittest discover -s tests -v
 uv run --frozen python scripts/live_smoke_test.py
 ```
 
-The live test executes the same client paths used by all four Dify nodes:
+The live test exercises the same client paths used by all four Tools nodes:
 
 1. Fetch the dynamic voice catalogue.
 2. Select a voice and generate a native audio file without transcoding.
 3. Transcribe that generated audio while sending every documented optional ASR parameter.
 4. Translate Japanese text to English using multipart form data.
 
-It fails on an empty or invalid result, missing voice format, tiny audio response, authentication failure, or the non-preferred `シサAI` brand spelling. Credentials and generated audio are not printed or saved.
+It fails on an empty or invalid result, missing voice format, tiny audio
+response, authentication failure, or the non-preferred `シサAI` brand spelling.
+Credentials and generated audio are not printed or saved.
 
-## Dify post-install workflow
+## Verified Dify workflow
 
-After installing the release package, construct and export a Dify **Workflow** with this deterministic chain:
+The Dify node execution is verified with a committed, importable workflow:
+
+```text
+docs/dify-smoke-test/Shisa-AI-Tools-Release-Smoke-Test.yml
+```
+
+Chain:
 
 ```text
 Start
-  → List TTS Voices
-  → Generate Speech (WAV)
-  → Transcribe Audio
-  → Translate Text
+  → List TTS Voices            (dynamic, Japanese + WAV)
+  → Select Dynamic Voice       (Code node, flattens Dify output)
+  → Generate Speech            (native WAV)
+  → Transcribe Audio (full)    (all documented optional ASR parameters)
+  → Transcribe Audio (blank)   (optional fields omitted → API defaults)
+  → Translate Text             (Japanese → English)
   → End
 ```
 
-### Start inputs
+Verified baseline: Dify Cloud run `297e1a02-1438-4fcb-a1e0-85cb80bd5070`
+(status: succeeded, 8 steps).
 
-| Input | Type | Suggested value |
-|---|---|---|
-| `voice_id` | text | Stable Japanese voice UUID from List TTS Voices |
-| `speech_text` | text | `シーサ・エーアイの音声認識と音声合成をテストします。` |
-| `translation_text` | text | `Shisa AIの音声ツールをテストします。` |
+## Pass criteria
 
-### Node settings
-
-**List TTS Voices**
-
-- `language`: `ja`
-- `format`: `wav`
-
-**Generate Speech**
-
-- `text`: `speech_text`
-- `voice_id`: `voice_id`
-- `format`: `wav`
-
-**Transcribe Audio**
-
-- `audio`: generated WAV file
-- `language`: `ja`
-- `hotwords`: `["Shisa AI","Shisa V2.1","Dify"]`
-- `temperature`: `0.0`
-- `top_p`: `0.85`
-- `frequency_penalty`: `0.5`
-- `repetition_penalty`: `1.05`
-- `vad`: `1`
-
-**Translate Text**
-
-- `text`: `translation_text`
-- `source_lang`: `ja`
-- `target_lang`: `en`
-
-### End outputs and pass criteria
-
-Expose these outputs:
-
-- Voice-list JSON: non-empty and selected voice advertises WAV.
-- Generated audio: non-empty WAV.
-- ASR text: non-empty and does not contain `シサAI`.
-- Complete ASR JSON: contains `text`; preserve `language` and `confidence` when supplied by the API.
-- Translation text: non-empty English text; no account-balance object.
-
-Also run one minimal Transcribe Audio node with every optional field blank. Its outgoing request must contain only `audio`, preserving Shisa API defaults.
+- Voice-list JSON is non-empty and the selected voice advertises WAV.
+- Generated audio is a non-empty WAV file.
+- Full-parameter ASR transcript is non-empty and does not contain `シサAI`.
+- Blank-parameter ASR request omits every optional field, preserving Shisa API defaults.
+- Structured ASR output preserves `text`, `language`, and `confidence` when supplied by the API.
+- Translation returns non-empty English text with no account-balance object.
 
 ## DSL verification rule
 
-Do not publish a hand-written DSL as installable. Import the workflow into the target Dify version, run it successfully, then re-export it. Commit only that Dify-exported baseline under `docs/dify-smoke-test/` and rerun it after each plugin update.
+Commit only DSLs that have passed a real **Dify import → execution → re-export**
+cycle. Re-import `Shisa-AI-Tools-Release-Smoke-Test.yml` into the target Dify
+version, run it, then commit the re-exported baseline so the file stays
+byte-for-byte what Dify produced.

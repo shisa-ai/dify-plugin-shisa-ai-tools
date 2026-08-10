@@ -33,10 +33,12 @@ Credentials and generated audio are not printed or saved.
 
 ## Verified Dify workflow
 
-The Dify node execution is verified with a committed, importable workflow:
+The Dify node execution is verified with the committed fixture in the
+[shisa-dify-workflows](https://github.com/shisa-ai/shisa-dify-workflows)
+repository:
 
 ```text
-docs/dify-smoke-test/Shisa-AI-Tools-Release-Smoke-Test.yml
+fixtures/shisa-tools-smoke.yml
 ```
 
 Chain:

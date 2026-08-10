@@ -1,6 +1,7 @@
 .env
 .env.*
 !.env.example
+!.env.e2e.example
 .dev.vars
 .dev.vars.*
 .venv/

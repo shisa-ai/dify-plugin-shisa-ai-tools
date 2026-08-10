@@ -33,6 +33,7 @@ jobs:
   dify-e2e:
     # Fork PRs run in structural mode (no secrets); same-repo PRs, tags and
     # manual dispatches run the full mode with real API assertions.
+    environment: release
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:

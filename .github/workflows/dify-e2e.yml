@@ -8,10 +8,22 @@ on:
   push:
     tags:
       - "v*"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "main.py"
+      - "shisa_client.py"
+      - "provider/**"
+      - "tools/**"
+      - "manifest.yaml"
+      - "pyproject.toml"
+      - "requirements.txt"
+      - "uv.lock"
   workflow_dispatch:
 
 concurrency:
-  group: dify-e2e-${{ github.ref }}
+  group: dify-e2e-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -28,6 +40,8 @@ env:
 
 jobs:
   dify-e2e:
+    # Fork PRs have no secrets and cannot run the E2E; skip them entirely.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:

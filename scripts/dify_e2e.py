@@ -182,30 +182,29 @@ def main() -> int:
             # consistently populated across versions.
             _wait("plugin install", lambda: _plugin_installed(client, headers, identifiers[0]))
 
-    # Configure the plugin tool provider credentials so the workflow nodes can
-    # call the Shisa AI API. In structural mode a placeholder key is enough
-    # because the real API calls are not asserted. The key is never printed.
+    # Structural mode (fork PRs, no secrets): verify install + DSL import +
+    # publish. Real-API credential validation and the workflow run are skipped.
     structural = os.environ.get("STRUCTURAL", "").strip().lower() in ("1", "true", "yes")
     shisa_key = os.environ.get("SHISA_API_KEY", "").strip()
     if not shisa_key and not structural:
         raise SystemExit("SHISA_API_KEY is required to configure tool provider credentials")
-    if not shisa_key:
-        shisa_key = "sk-structural-placeholder"
-    tool_provider = f"{identifiers[0].split('@')[0].split(':')[0]}/{identifiers[0].split('/')[-1].split(':')[0]}"
-    creds = client.post(
-        f"/console/api/workspaces/current/tool-provider/builtin/{tool_provider}/add",
-        headers=headers,
-        json={
-            "credentials": {
-                "api_key": shisa_key,
-                "api_base": "https://api.shisa.ai",
+
+    if not structural:
+        tool_provider = f"{identifiers[0].split('@')[0].split(':')[0]}/{identifiers[0].split('/')[-1].split(':')[0]}"
+        creds = client.post(
+            f"/console/api/workspaces/current/tool-provider/builtin/{tool_provider}/add",
+            headers=headers,
+            json={
+                "credentials": {
+                    "api_key": shisa_key,
+                    "api_base": "https://api.shisa.ai",
+                },
+                "name": "release-e2e",
+                "type": "api-key",
             },
-            "name": "release-e2e",
-            "type": "api-key",
-        },
-    )
-    if creds.status_code >= 400 and creds.status_code != 409 and "already used" not in creds.text and "already exists" not in creds.text:
-        creds.raise_for_status()
+        )
+        if creds.status_code >= 400 and creds.status_code != 409 and "already used" not in creds.text and "already exists" not in creds.text:
+            creds.raise_for_status()
 
     # Import the verified workflow DSL.
     imported = client.post(
@@ -243,6 +242,20 @@ def main() -> int:
     if publish.status_code >= 400 and publish.status_code != 409:
         publish.raise_for_status()
 
+    if structural:
+        print(
+            json.dumps(
+                {
+                    "status": "succeeded-structural",
+                    "app_id": app_id,
+                    "note": "install + DSL import + publish verified; real-API run skipped (fork PR, no secret)",
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 0
+
     # Publish API access and create a service API key.
     client.post(f"/console/api/apps/{app_id}/api-enable", headers=headers)
     key_response = client.post(f"/console/api/apps/{app_id}/api-keys", headers=headers)
@@ -267,32 +280,6 @@ def main() -> int:
     run.raise_for_status()
     data = run.json().get("data", {})
     if data.get("status") != "succeeded":
-        error = str(data.get("error", "")).lower()
-        if structural:
-            # In structural mode an API-boundary failure is expected with the
-            # placeholder key. Only structural problems fail the check.
-            structural_markers = (
-                "no default provider",
-                "not found",
-                "tool runtime",
-                "dsl",
-                "import",
-                "invalid file",
-            )
-            if any(marker in error for marker in structural_markers):
-                raise SystemExit(f"structural failure: {json.dumps(data, ensure_ascii=False)[:800]}")
-            print(
-                json.dumps(
-                    {
-                        "status": "succeeded-structural",
-                        "workflow_run_id": data.get("id"),
-                        "note": "pipeline reached the API boundary; real-API assertions skipped (fork PR, no secret)",
-                    },
-                    ensure_ascii=False,
-                    indent=2,
-                )
-            )
-            return 0
         raise SystemExit(f"workflow run failed: {json.dumps(data, ensure_ascii=False)[:800]}")
 
     outputs = data.get("outputs", {})

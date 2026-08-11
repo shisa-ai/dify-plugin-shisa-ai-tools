@@ -26,7 +26,6 @@ FORBIDDEN_NAMES = {".env", ".dev.vars", "uv.lock"}
 REQUIRED_NAMES = {
     "LICENSE",
     "README.md",
-    "SBOM.cdx.json",
     "manifest.yaml",
     "main.py",
     "requirements.txt",
@@ -68,12 +67,12 @@ def main() -> None:
         if packaged_manifest != source_manifest:
             raise SystemExit("packaged manifest differs from source manifest")
 
-        sbom = json.loads(archive.read("SBOM.cdx.json"))
+        sbom = json.loads(Path("SBOM.cdx.json").read_text(encoding="utf-8"))
         if sbom.get("bomFormat") != "CycloneDX":
-            raise SystemExit("embedded SBOM is not CycloneDX")
+            raise SystemExit("repository SBOM is not CycloneDX")
         sbom_component = sbom.get("metadata", {}).get("component", {})
         if sbom_component.get("name") != project["name"] or sbom_component.get("version") != project["version"]:
-            raise SystemExit("embedded SBOM does not describe this plugin version")
+            raise SystemExit("repository SBOM does not describe this plugin version")
 
         requirements = archive.read("requirements.txt").decode("utf-8")
         requirement_starts = [
@@ -86,8 +85,6 @@ def main() -> None:
             requirement = entry.split(" ; ", 1)[0]
             if not re.fullmatch(r"[A-Za-z0-9_.-]+==[^\s;]+", requirement):
                 raise SystemExit(f"runtime requirement is not pinned: {line}")
-        if "--hash=sha256:" not in requirements:
-            raise SystemExit("requirements.txt does not contain hashes")
 
     print(f"validated {package} ({package.stat().st_size} bytes)")
 

@@ -36,7 +36,7 @@ Current prices, quotas, available voices, formats, and service behavior can chan
 
 ## Installation
 
-1. Download `shisa-ai-tools-1.0.2.difypkg` from the [v1.0.2 GitHub Release](https://github.com/shisa-ai/dify-plugin-shisa-ai-tools/releases/tag/v1.0.2).
+1. Download `shisa-ai-tools-1.0.3.difypkg` from the [v1.0.3 GitHub Release](https://github.com/shisa-ai/dify-plugin-shisa-ai-tools/releases/tag/v1.0.3).
 2. Optionally verify its GitHub-provided SHA-256 digest and provenance attestation.
 3. In Dify, open **Plugins**, choose installation from a local package, and upload the file.
 4. Configure the Tools provider with your Shisa AI API key.
@@ -90,7 +90,7 @@ With the Dify plugin CLI installed:
 dify plugin package .
 ```
 
-Protected `v*` tags invoke `.github/workflows/release.yml`. CI builds and validates the `.difypkg`, embeds a runtime SBOM, attests provenance, and publishes only the installable package to the matching GitHub Release. Generated release files are excluded from Git.
+Protected `v*` tags invoke `.github/workflows/release.yml`. CI builds and validates the `.difypkg`, generates a runtime SBOM, attests provenance, and publishes only the installable package and SBOM to the matching GitHub Release. Generated release files are excluded from Git.
 
 ## License
 

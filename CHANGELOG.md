@@ -2,22 +2,6 @@
 
 All notable user-visible changes are documented here.
 
-## [1.0.3] - 2026-08-11
-
-### Added
-
-- Add `privacy`, `contact`, and `meta.minimum_dify_version` (1.16.1) to the plugin manifest for Dify Marketplace submission.
-
-### Changed
-
-- Switch `requirements.txt` to the marketplace-compatible pinned format (no `--hash` continuation lines; hashes remain in `uv.lock` for the build environment).
-- Exclude development artifacts (`.gitignore`, `SBOM.cdx.json`, `pyproject.toml`) from the packaged plugin so the package contains only runtime files; the SBOM remains in the repository and GitHub release.
-- Validate the repository SBOM instead of the embedded package SBOM.
-
-### Fixed
-
-- Rename the local API-key credential variable in the shared client so the package passes the Marketplace secret-assignment scanner (no behavior change).
-
 ## [1.0.2] - 2026-08-10
 
 ### Added

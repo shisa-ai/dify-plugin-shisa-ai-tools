@@ -52,10 +52,10 @@ def api_base(credentials: dict[str, Any]) -> str:
 
 
 def headers(credentials: dict[str, Any]) -> dict[str, str]:
-    key = str(credentials.get("api_key") or "").strip()
-    if not key:
+    api_key = str(credentials.get("api_key") or "").strip()
+    if not api_key:
         raise ValueError("Shisa AI API key is required")
-    return {"Authorization": f"Bearer {key}"}
+    return {"Authorization": f"Bearer {api_key}"}
 
 
 def raise_for_status(response: httpx.Response) -> None:

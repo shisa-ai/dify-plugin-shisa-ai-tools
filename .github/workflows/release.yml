@@ -119,7 +119,7 @@ jobs:
       - name: Resolve package path
         shell: bash
         run: |
-          echo "PKG_PATH=$(ls dist/*.difypkg | head -1)" >> "${GITHUB_ENV}"
+          echo "PKG_PATH=$(find dist -name '*.difypkg' | head -1)" >> "${GITHUB_ENV}"
       - name: Fetch verified fixtures
         run: |
           git clone --depth 1 "https://github.com/${FIXTURES_REPO}.git" /tmp/fixtures
@@ -205,7 +205,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          PACKAGE="$(ls dist/*.difypkg | head -1)"
+          PACKAGE="$(find dist -name '*.difypkg' | head -1)"
           gh release create "${GITHUB_REF_NAME}" \
             "${PACKAGE}" \
             --verify-tag \

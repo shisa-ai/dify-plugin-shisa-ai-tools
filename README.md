@@ -90,7 +90,7 @@ With the Dify plugin CLI installed:
 dify plugin package .
 ```
 
-Protected `v*` tags invoke `.github/workflows/release.yml`. CI builds and validates the `.difypkg`, generates a runtime SBOM, attests provenance, and publishes only the installable package and SBOM to the matching GitHub Release. Generated release files are excluded from Git.
+Protected `v*` tags invoke `.github/workflows/release.yml`. CI builds and validates the `.difypkg`, generates a runtime SBOM, attests provenance, and publishes only the installable package to the matching GitHub Release. Generated release files are excluded from Git.
 
 ## License
 

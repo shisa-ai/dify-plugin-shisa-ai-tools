@@ -11,7 +11,7 @@ All notable user-visible changes are documented here.
 ### Changed
 
 - Switch `requirements.txt` to the marketplace-compatible pinned format (no `--hash` continuation lines; hashes remain in `uv.lock` for the build environment).
-- Exclude development artifacts (`.gitignore`, `SBOM.cdx.json`, `pyproject.toml`) from the packaged plugin so the package contains only runtime files; the SBOM remains in the repository and GitHub release.
+- Exclude development artifacts (`.gitignore`, `SBOM.cdx.json`, `pyproject.toml`) from the packaged plugin so the package contains only runtime files; the SBOM remains in the repository.
 - Validate the repository SBOM instead of the embedded package SBOM.
 
 ### Fixed

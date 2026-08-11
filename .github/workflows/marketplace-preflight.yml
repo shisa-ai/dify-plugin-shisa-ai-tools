@@ -42,8 +42,9 @@ jobs:
           version: "0.8.22"
           enable-cache: false
 
-      - name: Clone official Marketplace Toolkit
-        run: git clone --depth 1 https://github.com/langgenius/dify-marketplace-toolkit.git .scripts
+      - name: Clone official Marketplace Toolkit (outside package root)
+        run: |
+          git clone --depth 1 https://github.com/langgenius/dify-marketplace-toolkit.git "${RUNNER_TEMP}/marketplace-toolkit"
 
       - name: Install system and Python dependencies
         run: |
@@ -77,12 +78,6 @@ jobs:
           unzip "${PACKAGE}" -d unpacked_plugin
           echo "PLUGIN_PATH=${GITHUB_WORKSPACE}/unpacked_plugin" >> "${GITHUB_ENV}"
 
-      - name: Debug scan target
-        run: |
-          echo "pwd=$(pwd)"
-          echo "PLUGIN_PATH=${PLUGIN_PATH}"
-          ls -la "${PLUGIN_PATH}" | head -5
-
       - name: Run official marketplace checks
         run: |
           set -e
@@ -94,5 +89,5 @@ jobs:
             check-readme-metadata \
             check-package-dependencies; do
             echo "== ${check} =="
-            python ".scripts/validator/${check}.py" -d "${PLUGIN_PATH}" || exit 1
+            python "${RUNNER_TEMP}/marketplace-toolkit/validator/${check}.py" -d "${PLUGIN_PATH}" || exit 1
           done
